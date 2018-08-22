@@ -27,7 +27,7 @@ class DataRW(io.BytesIO):
         an UTF-8 encoded string can be returned with ``kind=str``.
         """
         value = self.read(self.readvari32())
-        return value.encode('utf-8') if kind == str else value
+        return value.decode('utf-8') if kind == str else value
 
     def writestr(self, value):
         """
