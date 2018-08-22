@@ -1,4 +1,6 @@
 import socket
+import zlib
+
 from . import datarw
 
 
@@ -11,6 +13,7 @@ class Connection:
         self.sock = None
         self.ip = ip
         self.port = port
+        self._compression = None
         self._decrypt = lambda x: x
         self._encrypt = lambda x: x
 
@@ -43,6 +46,14 @@ class Connection:
             lambda: self._decrypt(self.sock.recv(1))[0])
 
         data = datarw.DataRW(self.read(length))
+        if self._compression is not None:
+            data_length = data.readvari32()
+            if data_length:
+                assert data_length >= self._compression
+                data = zlib.decompress(data.read())
+                assert len(data) == data_length
+                data = datarw.DataRW(data)
+
         return data.readvari32(), data
 
     def read(self, n):

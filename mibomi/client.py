@@ -83,7 +83,8 @@ class Client(connection.Connection):
         # Receive Login Success
         packet_id, data = self.recv()
         if packet_id == 3:
-            raise NotImplementedError('Compression is enabled')
+            self._compression = data.readvari32()
+            packet_id, data = self.recv()
 
         assert packet_id == 2
         player_uuid = data.readstr()
