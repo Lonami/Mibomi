@@ -84,6 +84,12 @@ class Client(connection.Connection):
         packet_id, data = self.recv()
         if packet_id == 3:
             self._compression = data.readvari32()
+            if self._compression < 0:
+                assert self._compression == -1
+                self._compression = None
+
+            # We may have received "enable compression first".
+            # If that's the case, re-receive the actual login success.
             packet_id, data = self.recv()
 
         assert packet_id == 2
