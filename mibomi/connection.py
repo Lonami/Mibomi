@@ -11,6 +11,8 @@ class Connection:
         self.sock = None
         self.ip = ip
         self.port = port
+        self._decrypt = lambda x: x
+        self._encrypt = lambda x: x
 
     def connect(self):
         """
@@ -37,7 +39,9 @@ class Connection:
         """
         Receives a packet from the network, returning ``(Packet ID, DataRW)``.
         """
-        length = datarw.DataRW.unpackvari(lambda: self.sock.recv(1)[0])
+        length = datarw.DataRW.unpackvari(
+            lambda: self._decrypt(self.sock.recv(1))[0])
+
         data = datarw.DataRW(self.read(length))
         return data.readvari32(), data
 
@@ -48,7 +52,7 @@ class Connection:
         data = b''
         while len(data) != n:
             data += self.sock.recv(n - len(data))
-        return data
+        return self._decrypt(data)
 
     def __enter__(self):
         self.connect()
