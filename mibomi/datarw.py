@@ -4,6 +4,9 @@ import struct
 
 # https://docs.python.org/3/library/struct.html#format-characters
 # noinspection SpellCheckingInspection
+import uuid
+
+
 class DataRW(io.BytesIO):
     """
     Fast Data Read-Writer to serialize and deserialize binary data.
@@ -21,21 +24,29 @@ class DataRW(io.BytesIO):
         """
         self.write(struct.pack('>' + fmt, *values))
 
-    def readstr(self, kind=bytes):
+    def readstr(self):
         """
-        Reads a string of data. Defaults to reading a blob, but
-        an UTF-8 encoded string can be returned with ``kind=str``.
+        Reads a text string of data.
         """
-        value = self.read(self.readvari32())
-        return value.decode('utf-8') if kind == str else value
+        return self.read(self.readvari32()).decode('utf-8')
+
+    def readbytes(self):
+        """
+        Reads a byte string of data.
+        """
+        return self.read(self.readvari32())
 
     def writestr(self, value):
         """
-        Writes the given string of data.
+        Writes the given text string of data.
         """
-        if isinstance(value, str):
-            value = value.encode('utf-8')
+        self.writebytes(value.encode('utf-8'))
 
+
+    def writebytes(self, value):
+        """
+        Writes the given byte string of data.
+        """
         self.writevari32(len(value))
         self.write(value)
 
@@ -127,3 +138,21 @@ class DataRW(io.BytesIO):
             ((y & 0xfff)     << 26) |
             ((z & 0x3ffffff) << 0)
         ))
+
+    def readangle(self):
+        return self.read(1)[0]
+
+    def writeangle(self, value):
+        self.write(bytes([value]))
+
+    def readuuid(self):
+        return uuid.UUID(self.read(16))
+
+    def writeuuid(self, value):
+        self.write(value.bytes)
+
+    def readleft(self):
+        return self.read()
+
+    def writeleft(self, value):
+        self.write(value)

@@ -67,8 +67,8 @@ class Client(connection.Connection):
         token = pk.encrypt(verify_token, PKCS1v15())
 
         data = datarw.DataRW()
-        data.writestr(encrypted_secret)
-        data.writestr(token)
+        data.writebytes(encrypted_secret)
+        data.writebytes(token)
         self.send(1, data.getvalue())
 
         # Enable encryption on the socket level
