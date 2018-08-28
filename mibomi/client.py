@@ -12,7 +12,7 @@ PROTOCOL_V1_12_2 = 340
 
 
 class Client(connection.Connection):
-    def handshake(self, state: enums.HandshakeState):
+    async def handshake(self, state: enums.HandshakeState):
         """
         Performs a handshake with the server.
         """
@@ -21,21 +21,21 @@ class Client(connection.Connection):
         data.writestr(self.ip)
         data.writefmt('H', self.port)
         data.writevari32(state)
-        self.send(0, data.getvalue())
+        await self.send(0, data.getvalue())
 
-    def login(self, username, access_token, profile_id):
+    async def login(self, username, access_token, profile_id):
         """
         Starts the login process with the server until its completion.
         """
         # Send the Login Start packet
         data = datarw.DataRW()
         data.writestr(username)
-        self.send(0, data.getvalue())
+        await self.send(0, data.getvalue())
 
         # Receive Encryption Request
-        pid, data = self.recv()
+        pid, data = await self.recv()
         assert pid == 1
-        server_id = data.readstr(str)
+        server_id = data.readstr()
         pk_len = data.readvari32()
         pk = data.read(pk_len)
         vt_len = data.readvari32()
@@ -58,7 +58,7 @@ class Client(connection.Connection):
             server_hash = '{:x}'.format(server_hash)
 
             # Assert joining the session succeeds
-            assert authenticator.session_join(
+            assert await authenticator.session_join(
                 access_token, profile_id, server_hash)
 
         # Send the Encryption Request packet
@@ -69,7 +69,7 @@ class Client(connection.Connection):
         data = datarw.DataRW()
         data.writebytes(encrypted_secret)
         data.writebytes(token)
-        self.send(1, data.getvalue())
+        await self.send(1, data.getvalue())
 
         # Enable encryption on the socket level
         cipher = Cipher(
@@ -81,7 +81,7 @@ class Client(connection.Connection):
         self._decrypt = cipher.decryptor().update
 
         # Receive Login Success
-        packet_id, data = self.recv()
+        packet_id, data = await self.recv()
         if packet_id == 3:
             self._compression = data.readvari32()
             if self._compression < 0:
@@ -90,15 +90,15 @@ class Client(connection.Connection):
 
             # We may have received "enable compression first".
             # If that's the case, re-receive the actual login success.
-            packet_id, data = self.recv()
+            packet_id, data = await self.recv()
 
         assert packet_id == 2
         player_uuid = data.readstr()
         player_name = data.readstr()
         return player_uuid, player_name
 
-    def request(self):
+    async def request(self):
         """
         Sends a (ping, empty) request to the server.
         """
-        self.send(0, b'')
+        await self.send(0, b'')

@@ -81,6 +81,22 @@ class DataRW(io.BytesIO):
             it += 1
         raise ValueError('variable length integer is too long')
 
+    @staticmethod
+    async def aunpackvari(read1, bits=32):
+        """
+        Async version of `unpackvari`.
+        """
+        it = 0
+        acc = 0
+        count, u, p = (5, 'i', 'I')  if bits == 32 else (10, 'q', 'Q')
+        while it != count:
+            n = await read1()
+            acc |= (n & 0x7f) << (7 * it)
+            if not (n & 0x80):
+                return struct.unpack(u, struct.pack(p, acc))[0]
+            it += 1
+        raise ValueError('variable length integer is too long')
+
     def writevari32(self, value):
         """
         Writes a variable-length integer of at most 32 bits.

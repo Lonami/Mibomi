@@ -1,3 +1,4 @@
+import asyncio
 import socket
 import zlib
 
@@ -9,20 +10,23 @@ class Connection:
     This class is responsible for connecting to Minecraft servers,
     pack outgoing data as requests, and unpack incoming messages.
     """
-    def __init__(self, ip, port=25565):
+    def __init__(self, ip, port=25565, *, loop=None):
         self.sock = None
         self.ip = ip
         self.port = port
+        self._loop = loop or asyncio.get_event_loop()
+        self._rlock = asyncio.Lock(loop=self._loop)
         self._compression = None
         self._decrypt = lambda x: x
         self._encrypt = lambda x: x
 
-    def connect(self):
+    async def connect(self):
         """
         Stabilises a connection to the server.
         """
         self.sock = socket.socket()
-        self.sock.connect((self.ip, self.port))
+        self.sock.setblocking(False)
+        await self._loop.sock_connect(self.sock, (self.ip, self.port))
 
     def disconnect(self):
         """
@@ -30,22 +34,22 @@ class Connection:
         """
         self.sock.close()
 
-    def send(self, pid, data):
+    async def send(self, pid, data):
         """
         Sends a packet with the given Packet ID and payload binary data.
         """
         pid = datarw.DataRW.packvari(pid)
         length = datarw.DataRW.packvari(len(pid) + len(data))
-        self.sock.sendall(length + pid + data)
+        await self._loop.sock_sendall(self.sock, length + pid + data)
 
-    def recv(self):
+    async def recv(self):
         """
         Receives a packet from the network, returning ``(Packet ID, DataRW)``.
         """
-        length = datarw.DataRW.unpackvari(
-            lambda: self._decrypt(self.sock.recv(1))[0])
+        async with self._rlock:
+            length = await datarw.DataRW.aunpackvari(self._recv1)
+            data = datarw.DataRW(await self.read(length))
 
-        data = datarw.DataRW(self.read(length))
         if self._compression is not None:
             data_length = data.readvari32()
             if data_length:
@@ -56,18 +60,21 @@ class Connection:
 
         return data.readvari32(), data
 
-    def read(self, n):
+    async def _recv1(self):
+        return self._decrypt(await self._loop.sock_recv(self.sock, 1))[0]
+
+    async def read(self, n):
         """
         Reads *exactly* `n` bytes from the network.
         """
         data = b''
         while len(data) != n:
-            data += self.sock.recv(n - len(data))
+            data += await self._loop.sock_recv(self.sock, n - len(data))
         return self._decrypt(data)
 
-    def __enter__(self):
-        self.connect()
+    async def __aenter__(self):
+        await self.connect()
         return self
 
-    def __exit__(self, *args):
+    async def __aexit__(self, *args):
         self.disconnect()

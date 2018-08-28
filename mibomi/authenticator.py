@@ -3,7 +3,7 @@ Helper module to authenticate a client at Mojang servers.
 
 See https://wiki.vg/Authentication.
 """
-import requests
+import aiohttp
 
 AUTH_URL = 'https://authserver.mojang.com'
 SESSION_URL = 'https://sessionserver.mojang.com'
@@ -33,7 +33,7 @@ class AuthenticateResponse:
             Profile(x) for x in data['availableProfiles']]
 
 
-def authenticate(username, password, token=None):
+async def authenticate(username, password, token=None):
     """
     Authenticates the given username (or email address) with the
     correct account password.
@@ -43,28 +43,31 @@ def authenticate(username, password, token=None):
     client. Using an empty token will cause previous ones to be
     invalidated, and the server will generate and return one.
     """
-    data = requests.post(AUTH_URL + '/authenticate', json=dict(
-        agent=dict(
-            name='Minecraft',
-            version=1
-        ),
-        username=username,
-        password=password,
-        **(dict(clientToken=token) if token else {}),
-        # requestUser=True
-    )).json()
+    async with aiohttp.ClientSession() as session:
+        data = await (await session.post(AUTH_URL + '/authenticate', json=dict(
+            agent=dict(
+                name='Minecraft',
+                version=1
+            ),
+            username=username,
+            password=password,
+            **(dict(clientToken=token) if token else {}),
+            # requestUser=True
+        ))).json()
     if 'error' in data:
         raise ValueError('{}: {}'.format(data['error'], data['errorMessage']))
     else:
         return AuthenticateResponse(data)
 
 
-def session_join(access_token, profile_id, server_hash):
+async def session_join(access_token, profile_id, server_hash):
     """
     Joins a Minecraft online session. Returns ``True`` on success.
     """
-    return requests.post(SESSION_URL + '/session/minecraft/join', json=dict(
-        accessToken=access_token,
-        selectedProfile=profile_id,
-        serverId=server_hash
-    )).status_code == 204
+    async with aiohttp.ClientSession() as session:
+        return (await session.post(SESSION_URL
+                                   + '/session/minecraft/join', json=dict(
+            accessToken=access_token,
+            selectedProfile=profile_id,
+            serverId=server_hash
+        ))).status == 204
