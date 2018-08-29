@@ -1,9 +1,10 @@
+import asyncio
 import getpass
 import json
 import os
 import pprint
-import asyncio
 
+import mibomi.akbhit
 import mibomi.authenticator
 import mibomi.client
 import mibomi.enums
@@ -47,10 +48,47 @@ async def main():
         print('JSON data:')
         pprint.pprint(json.loads(data.readstr()))
 
-    async with mibomi.client.Client('localhost') as client:
-        username = input('Enter player name: ')
+    loop = asyncio.get_event_loop()
+    async with mibomi.client.Client('localhost') as client,\
+            mibomi.akbhit.KBHit(loop) as kb:
+        async def handle_key(key):
+            key = key.lower()
+            if key == 'w':
+                await client.player_position(0.1, 0, 0)
+            elif key == 'a':
+                await client.player_position(0, 0, -0.1)
+            elif key == 's':
+                await client.player_position(-0.1, 0, 0)
+            elif key == 'd':
+                await client.player_position(0, 0, 0.1)
+            elif key == 'm':
+                s = ''
+                while True:
+                    k = await kb.getch()
+                    if k == '\n':
+                        break
+                    else:
+                        s += k
+                await client.chat_message(s)
+
+        done = False
+        async def loop_keys():
+            while not done:
+                await handle_key(await kb.getch())
+
+        task = loop.create_task(loop_keys())
+
+        # username = input('Enter player name: ')
+        username = 'Memelord'
+        print('Logging in...', end='', flush=True)
         await client.handshake(mibomi.enums.HandshakeState.LOGIN)
         await client.login(username, access_token, profile_id)
+        print(' Done.')
+        print('Running client...', end='', flush=True)
+        await client.run()
+        print(' Done.')
+        done = True
+        await task
 
 
 if __name__ == '__main__':
