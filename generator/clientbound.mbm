@@ -1,0 +1,11 @@
+keep_alive#1f id:i64 -> KeepAlive;
+
+player_abilities#2c
+    flags:u8 flying_speed:float fov_modifier:float
+    -> PlayerAbilities;
+
+player_position_and_look#2f
+    x:double y:double z:double yaw:float pitch:float flags:u8 teleport_id:vari32
+    -> PlayerPositionAndLook;
+
+disconnect#1a reason:str -> Disconnect;

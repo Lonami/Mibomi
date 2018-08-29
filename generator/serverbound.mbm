@@ -1,0 +1,24 @@
+teleport_confirm#0 id:vari32 -> TeleportConfirm;
+
+chat_message#2 message:str -> ChatMessage;
+
+client_status#3 action_id:vari32 -> ClientStatus;
+
+client_settings#4
+    locale:str view_distance:u8 chat_mode:vari32 chat_colors:bool
+    displayed_skin_parts:u8 main_hand:vari32
+    -> ClientSettings;
+
+plugin_message#9
+    channel:str data:bytes
+    -> PluginMessage;
+
+keep_alive#b id:i64 -> KeepAlive;
+
+player_position#d
+    x:double y:double z:double on_ground:bool
+    -> PlayerPosition;
+
+player_position_and_look#e
+    x:double y:double z:double yaw:float pitch:float on_ground:bool
+    -> PlayerPositionAndLook;
