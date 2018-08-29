@@ -38,9 +38,21 @@ class Connection:
         """
         Sends a packet with the given Packet ID and payload binary data.
         """
-        pid = datarw.DataRW.packvari(pid)
-        length = datarw.DataRW.packvari(len(pid) + len(data))
-        await self._loop.sock_sendall(self.sock, length + pid + data)
+        # For both modes, the data length that counts is Packet ID and Data
+        data = datarw.DataRW.packvari(pid) + data
+        if self._compression is not None:
+            # If compression is enabled, compress unless below threshold, in
+            # which case the inner data length should be 0 (not compressed).
+            if len(data) < self._compression:
+                data_length = 0
+            else:
+                data_length = len(data)
+                data = zlib.compress(data)
+
+            data = datarw.DataRW.packvari(data_length) + data
+
+        data = datarw.DataRW.packvari(len(data)) + data
+        await self._loop.sock_sendall(self.sock, data)
 
     async def recv(self):
         """

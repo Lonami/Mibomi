@@ -42,7 +42,6 @@ class DataRW(io.BytesIO):
         """
         self.writebytes(value.encode('utf-8'))
 
-
     def writebytes(self, value):
         """
         Writes the given byte string of data.
