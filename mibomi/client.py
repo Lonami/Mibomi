@@ -34,7 +34,27 @@ class Client(connection.Connection):
 
         # Receive Encryption Request
         pid, data = await self.recv()
-        assert pid == 1
+        if pid == 1:
+            await self._setup_encryption(data, access_token, profile_id)
+            pid, data = await self.recv()
+
+        # Receive Login Success
+        if pid == 3:
+            self._compression = data.readvari32()
+            if self._compression < 0:
+                assert self._compression == -1
+                self._compression = None
+
+            # We may have received "enable compression first".
+            # If that's the case, re-receive the actual login success.
+            pid, data = await self.recv()
+
+        assert pid == 2
+        player_uuid = data.readstr()
+        player_name = data.readstr()
+        return player_uuid, player_name
+
+    async def _setup_encryption(self, data, access_token, profile_id):
         server_id = data.readstr()
         pk_len = data.readvari32()
         pk = data.read(pk_len)
@@ -79,23 +99,6 @@ class Client(connection.Connection):
         )
         self._encrypt = cipher.encryptor().update
         self._decrypt = cipher.decryptor().update
-
-        # Receive Login Success
-        packet_id, data = await self.recv()
-        if packet_id == 3:
-            self._compression = data.readvari32()
-            if self._compression < 0:
-                assert self._compression == -1
-                self._compression = None
-
-            # We may have received "enable compression first".
-            # If that's the case, re-receive the actual login success.
-            packet_id, data = await self.recv()
-
-        assert packet_id == 2
-        player_uuid = data.readstr()
-        player_name = data.readstr()
-        return player_uuid, player_name
 
     async def request(self):
         """
