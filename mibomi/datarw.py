@@ -40,13 +40,14 @@ class DataRW(io.BytesIO):
         """
         Writes the given text string of data.
         """
-        self.writebytes(value.encode('utf-8'))
+        value = value.encode('utf-8')
+        self.writevari32(len(value))
+        self.writebytes(value)
 
     def writebytes(self, value):
         """
         Writes the given byte string of data.
         """
-        self.writevari32(len(value))
         self.write(value)
 
     def readvari32(self):

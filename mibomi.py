@@ -1,3 +1,7 @@
+import logging
+logging.basicConfig(level=logging.DEBUG)
+_log = logging.getLogger(__name__)
+
 import asyncio
 import getpass
 import json
@@ -54,13 +58,13 @@ async def main():
         async def handle_key(key):
             key = key.lower()
             if key == 'w':
-                await client.player_position(0.1, 0, 0)
+                await client.walk(+1, 0)
             elif key == 'a':
-                await client.player_position(0, 0, -0.1)
+                await client.walk(0, -1)
             elif key == 's':
-                await client.player_position(-0.1, 0, 0)
+                await client.walk(-1, 0)
             elif key == 'd':
-                await client.player_position(0, 0, 0.1)
+                await client.walk(0, +1)
             elif key == 'm':
                 s = ''
                 while True:
@@ -74,7 +78,10 @@ async def main():
         done = False
         async def loop_keys():
             while not done:
-                await handle_key(await kb.getch())
+                try:
+                    await handle_key(await kb.getch())
+                except Exception:
+                    _log.exception('Unhandled exception handling key')
 
         task = loop.create_task(loop_keys())
 
