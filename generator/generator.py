@@ -7,7 +7,7 @@ def generate_class(f, definition, indent=''):
     f.write(indent)
     f.write('class ')
     f.write(definition.cls)
-    f.write(':\n')
+    f.write('(ServerType):\n')
 
     if definition.id:
         f.write(indent)

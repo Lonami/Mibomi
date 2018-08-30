@@ -144,8 +144,6 @@ class Client(requester.Requester):
     async def on_unknown(self, pid, data):
         pass  # _log.debug('Unknown packet %x', pid)
 
-    # TODO If the methods use typing, they can be called anything,
-    # and we can use the type hints + their ID to build the mapping
     async def on_keep_alive(self, keep_alive: types.KeepAlive):
         # Keep Alive packet, must respond within 30 seconds
         # TODO We should disconnect if we don't receive these for 20s
