@@ -2,12 +2,13 @@ import hashlib
 import logging
 import os
 
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 
-from . import requester, types, enums, datarw, authenticator
+from . import requester, types, enums, datarw, authenticator, timer
 
 PROTOCOL_V1_12_2 = 340
 
@@ -23,6 +24,9 @@ class Client(requester.Requester):
             else self.on_generic
             for pid, cls in types.TYPES.items()
         }
+
+        self._disconnect_timer = timer.Timer(
+            20, self.keep_alive_disconnect, loop=loop)
 
     async def handshake(self, state: enums.HandshakeState):
         """
@@ -64,6 +68,7 @@ class Client(requester.Requester):
         assert pid == 2
         player_uuid = data.readstr()
         player_name = data.readstr()
+        self._disconnect_timer.start()
         return player_uuid, player_name
 
     async def _setup_encryption(self, data, access_token, profile_id):
@@ -146,8 +151,7 @@ class Client(requester.Requester):
 
     async def on_keep_alive(self, keep_alive: types.KeepAlive):
         # Keep Alive packet, must respond within 30 seconds
-        # TODO We should disconnect if we don't receive these for 20s
-        # The data to send is the same as the data we received (a long).
+        self._disconnect_timer.reset()
         _log.debug('Responding to keep-alive')
         await self.keep_alive(keep_alive.id)
 
@@ -190,3 +194,7 @@ class Client(requester.Requester):
         Sends a (ping, empty) request to the server.
         """
         await self.send(0, b'')
+
+    async def keep_alive_disconnect(self):
+        _log.info('Server did not send a keep-alive in time; disconnecting')
+        self.disconnect()
