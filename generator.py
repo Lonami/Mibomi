@@ -10,10 +10,10 @@ import io
 import pprint
 TYPES={}
 class ServerType:
- def __str__(self):
+ def __repr__(self):
   x = io.StringIO()
   pprint.pprint(self.__dict__, stream=x)
-  return x.getvalue()
+  return x.getvalue().rstrip()
 '''.lstrip())
         for definition in generator.parser.parse_str(fin.read()):
             generator.generator.generate_class(fout, definition)

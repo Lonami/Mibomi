@@ -5,6 +5,7 @@ import struct
 # https://docs.python.org/3/library/struct.html#format-characters
 # noinspection SpellCheckingInspection
 import uuid
+import warnings
 
 
 class DataRW(io.BytesIO):
@@ -162,7 +163,7 @@ class DataRW(io.BytesIO):
         self.write(bytes([value]))
 
     def readuuid(self):
-        return uuid.UUID(self.read(16))
+        return uuid.UUID(bytes=self.read(16))
 
     def writeuuid(self, value):
         self.write(value.bytes)
@@ -172,3 +173,15 @@ class DataRW(io.BytesIO):
 
     def writeleft(self, value):
         self.write(value)
+
+    def readentmeta(self):
+        warnings.warn('read entity metadata is not implemented')
+
+    def writeentmeta(self, value):
+        warnings.warn('write entity metadata is not implemented')
+
+    def readnbt(self):
+        warnings.warn('read nbt is not implemented')
+
+    def writenbt(self):
+        warnings.warn('writing nbt is not implemented')

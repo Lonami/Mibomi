@@ -1,4 +1,45 @@
+spawn_object#0
+    id:vari32 uuid:uuid type:u8 x:double y:double z:double
+    pitch:angle yaw:angle data:i32 vx:i16 y:i16 z:i16 -> SpawnObject;
+
+spawn_mob#3
+    id:vari32 uuid:uuid type:vari32 x:double y:double z:double
+    yaw:angle pitch:angle head_pitch:angle vx:i16 y:i16 z:i16 metadata:entmeta
+    -> SpawnMob;
+
+spawn_player#5
+    id:vari32 uuid:uuid x:double y:double z:double
+    yaw:angle pitch:angle metadata:entmeta
+    -> SpawnPlayer;
+
+animation#6 id:vari32 animation:u8 -> Animation;
+
+block_change#b location:pos id:vari32 -> BlockChange;
+
 server_difficulty#d difficulty:u8 -> Difficulty;
+
+chat_message#f data:str position:u8 -> ChatMessage;
+
+record h_pos:u8 y:u8 block_id:vari32 -> Record;
+
+multi_block_change#10
+    chunk_x:i32 chunk_z:i32 records:vari32+Record
+    -> MultiBlockChange;
+
+slot
+    block_id:i16
+    item_count:i8?block_id?!=?-1
+    item_damage:i16?block_id?!=?-1
+    nbt:u8?block_id?!=?-1
+    -> Slot;
+
+window_items#14
+    id:u8 slot:i16+Slot
+    -> WindowItems;
+
+set_slot#16
+    window_id:u8 slot:i16 slot_data:Slot
+    -> SetSlot;
 
 resource_pack_status#18 status:vari32 -> ResourcePackStatus;
 
@@ -6,11 +47,44 @@ disconnect#1a reason:str -> Disconnect;
 
 entity_status#1b id:i32 status:u8 -> EntityStatus;
 
+unload_chunk#1d x:i16 z:i16 -> UnloadChunk;
+
 keep_alive#1f id:i64 -> KeepAlive;
+
+chunk_data#20
+    x:i32 z:i32 new_chunk:bool bit_mask:vari32
+    data:vari32+u8 block_entities:vari32+nbt
+    -> ChunkData;
+
+join_game#23
+    id:i32 gamemode:u8 dimension:i32 difficulty:u8
+    max_players:u8 level_type:str reduced_debug_info:bool
+    -> JoinGame;
+
+entity_relative_move#26
+    id:vari32 dx:i16 dy:i16 dz:i16 on_ground:bool
+    -> EntityRelativeMove;
+
+entity_look_and_relative_move#27
+    id:vari32 dx:i16 dy:i16 dz:i16 yaw:angle pitch:angle on_ground:bool
+    -> EntityLookAndRelativeMove;
+
+entity_look#28
+    id:vari32 yaw:angle pitch:angle on_ground:bool
+    -> EntityLook;
 
 player_abilities#2c
     flags:u8 flying_speed:float fov_modifier:float
     -> PlayerAbilities;
+
+combat_event#2d
+    event:vari32
+    duration:vari32?event?==?1
+    entity_id:i32?event?==?1
+    player_id:vari32?event?==?2
+    entity_id:i32?event?==?2
+    message:str?event?==?2
+    -> CombatEvent;
 
 player_position_and_look#2f
     x:double y:double z:double yaw:float pitch:float flags:u8 teleport_id:vari32
@@ -22,4 +96,111 @@ unlock_recipes#31
     init_recipe_ids:vari32+vari32?action?==?0
     -> UnlockRecipes;
 
+destroy_entities#32 ids:vari32+vari32 -> DestroyEntities;
+
+entity_head_look#36
+    id:vari32 head_yaw:angle
+    -> EntityHeadLook;
+
+world_border#38
+    action:vari32
+    // set size
+    diameter:double?action?==?0
+
+    // lerp size
+    old_diameter:double?action?==?1
+    new_diameter:double?action?==?1
+    speed:vari64?action?==?1
+
+    // set center
+    x:double?action?==?2
+    z:double?action?==?2
+
+    // initialize
+    x:double?action?==?3
+    z:double?action?==?3
+    old_diameter:double?action?==?3
+    new_diameter:double?action?==?3
+    speed:vari64?action?==?3
+    portal_tp_boundary:vari32?action?==?3
+    warning_time:vari32?action?==?3
+    warning_blocks:vari32?action?==?3
+
+    // set warning time
+    warning_time:vari32?action?==?4
+
+    // set warning blocks
+    warning_blocks:vari32?action?==?5
+
+    -> WorldBorder;
+
 held_item_change#3a slot:u8 -> HeldItemChange;
+
+entity_metadata#3c id:vari32 metadata:entmeta -> EntityMetadata;
+entity_velocity#3e id:vari32 vx:i16 vy:i16 vz:i16 -> EntityVelocity;
+entity_equipment#3f id:vari32 slot:vari32 item:Slot -> EntityEquipment;
+
+set_experience#40
+    experience_bar:float level:vari32 total_experience:vari32
+    -> SetExperience;
+
+update_health#41
+    health:float food:vari32 food_saturation:float
+    -> UpdateHealth;
+
+spawn_position#46 location:pos -> SpawnPosition;
+
+time_update#47
+    world_age:i64 time_of_day:i64
+    -> TimeUpdate;
+
+modifier
+    uuid:uuid amount:double operation:u8
+    -> Modifier;
+
+entity_property
+    key:str value:double modifiers:vari32+Modifier
+    -> EntityProperty;
+
+sound_effect#49
+    id:vari32 category:vari32 x:i32 y:i32 z:i32 volume:float pitch:float
+    -> SoundEffect;
+
+entity_teleport#4c
+    id:vari32 x:double y:double z:double yaw:angle pitch:angle on_ground:bool
+    -> EntityTeleport;
+
+// v ADVANCEMENTS
+advancement_display
+    title:str description:str icon:Slot frame:vari32 flags:i32
+    background_texture:str?flags?&?1
+    x:float y:float
+    -> AdvancementDisplay;
+
+requirement requirement:vari32+str -> Requirement;
+
+advancement
+    has_parent:bool parent_id:str?has_parent?is?True
+    has_display:bool display:AdvancementDisplay?has_display?is?True
+    criteria:vari32+str
+    requirements:vari32+Requirement
+    -> Advancement;
+
+AdvancementMapping id:str advancement:Advancement -> AdvancementMapping;
+
+criterion id:str achieved:bool date:i64?achieved?is?True -> Criterion;
+progress criteria:vari32+Criterion -> Progress;
+ProgressMapping id:str advancement:Progress -> ProgressMapping;
+
+advancements#4d
+    reset:bool
+    mapping:vari32+AdvancementMapping
+    identifiers:vari32+str
+    progress_mapping:vari32+ProgressMapping
+    -> Advancements;
+
+// ^ ADVANCEMENTS
+
+entity_properties#4e
+    id:vari32 properties:i32+EntityProperty
+    -> EntityProperties;

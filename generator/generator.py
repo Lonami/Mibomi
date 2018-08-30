@@ -1,5 +1,9 @@
+from . import parser
+
+
 _BUILTIN_CLS = {
-    'vari32', 'vari64', 'uuid', 'str', 'bytes', 'angle', 'pos', 'left'
+    'vari32', 'vari64', 'uuid', 'str', 'bytes', 'angle', 'pos',
+    'entmeta', 'nbt'
 }
 
 
@@ -9,7 +13,7 @@ def generate_class(f, definition, indent=''):
     f.write(definition.cls)
     f.write('(ServerType):\n')
 
-    if definition.id:
+    if definition.id is not None:
         f.write(indent)
         f.write(' ID=')
         f.write(hex(definition.id))
@@ -29,7 +33,7 @@ def generate_class(f, definition, indent=''):
     else:
         _generate_read_method(f, indent + '  ', definition.args)
 
-    if definition.id:
+    if definition.id is not None:
         f.write(indent)
         f.write('TYPES[')
         f.write(hex(definition.id))
@@ -76,7 +80,9 @@ def _generate_read_method(f, indent, args):
             if group.depends:
                 f.write('if self.')
                 f.write(group.depends.name)
+                f.write(' ')
                 f.write(group.depends.op)
+                f.write(' ')
                 f.write(group.depends.value)
                 f.write(':\n')
                 indent += ' '
@@ -87,30 +93,48 @@ def _generate_read_method(f, indent, args):
             f.write('=')
 
             if group.vec_count_cls:
+                # Special case vectors of u8 as byte strings
+                if group.cls == 'u8':
+                    f.write('data.read(')
+                    _generate_read1(f, group.vec_count_cls)
+                    f.write(')\n')
+                    # TODO This is getting messy
+                    if group.depends:
+                        indent = indent[:-1]
+                    continue
+
                 f.write('[')
 
             if group.builtin_fmt:
-                raise NotImplementedError
-            elif group.cls in _BUILTIN_CLS:
-                f.write('data.read')
-                f.write(group.cls)
-                f.write('()')
+                f.write('data.readfmt(')
+                f.write(repr(group.builtin_fmt))
+                f.write(')[0]')
             else:
-                f.write(group.cls)
-                f.write('(data)')
+                _generate_read1(f, group.cls)
 
             if group.vec_count_cls:
-                if group.vec_count_cls not in _BUILTIN_CLS:
-                    raise NotImplementedError
-
-                f.write(' for _ in range(data.read')
-                f.write(group.vec_count_cls)
-                f.write('())]')
+                f.write(' for _ in range(')
+                _generate_read1(f, group.vec_count_cls)
+                f.write(')]')
 
             if group.depends:
                 indent = indent[:-1]
 
         f.write('\n')
+
+
+def _generate_read1(f, cls):
+    if cls in parser.TYPE_TO_FMT:
+        f.write('data.readfmt(')
+        f.write(repr(parser.TYPE_TO_FMT[cls]))
+        f.write(')[0]')
+    elif cls in _BUILTIN_CLS:
+        f.write('data.read')
+        f.write(cls)
+        f.write('()')
+    else:
+        f.write(cls)
+        f.write('(data)')
 
 def _generate_write_method(f, indent, args):
     for group in _collapse_args(args):
@@ -125,7 +149,9 @@ def _generate_write_method(f, indent, args):
             if group.depends:
                 f.write('if ')
                 f.write(group.depends.name)
+                f.write(' ')
                 f.write(group.depends.op)
+                f.write(' ')
                 f.write(group.depends.value)
                 f.write(':\n')
                 indent += ' '

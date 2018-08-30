@@ -2,7 +2,7 @@ import re
 import sys
 
 
-_TYPE_TO_FMT = {
+TYPE_TO_FMT = {
     'i8': 'b',
     'u8': 'B',
     'i16': 'h',
@@ -34,7 +34,7 @@ class ArgDefinition:
         self.cls = cls
         self.vec_count_cls = vec_count_cls
         self.depends = depends
-        self.builtin_fmt = _TYPE_TO_FMT.get(self.cls)
+        self.builtin_fmt = TYPE_TO_FMT.get(self.cls)
 
     def __str__(self):
         result = '{}:{}'.format(self.name, self.cls)

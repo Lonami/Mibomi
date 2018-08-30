@@ -187,7 +187,8 @@ class Client(requester.Requester):
 
     async def on_generic(self, obj):
         """Callback to handle a generic Packet ID."""
-        print('Received', obj)
+        if not isinstance(obj, (types.TimeUpdate, types.ChunkData)):
+            _log.debug('Received %s: %s', obj.NAME, obj)
 
     async def request(self):
         """
