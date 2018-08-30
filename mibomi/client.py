@@ -147,7 +147,7 @@ class Client(requester.Requester):
         await self.player_position(x, y, z, on_ground=True)
 
     async def on_unknown(self, pid, data):
-        pass  # _log.debug('Unknown packet %x', pid)
+        _log.debug('Unknown packet %x', pid)
 
     async def on_keep_alive(self, keep_alive: types.KeepAlive):
         # Keep Alive packet, must respond within 30 seconds

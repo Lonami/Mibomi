@@ -29,16 +29,48 @@ class Definition:
             self.name, self.id, '\n  '.join(map(str, self.args)), self.cls)
 
 class ArgDefinition:
-    def __init__(self, name, cls):
+    def __init__(self, name, cls, vec_count_cls, depends):
         self.name = name
         self.cls = cls
+        self.vec_count_cls = vec_count_cls
+        self.depends = depends
         self.builtin_fmt = _TYPE_TO_FMT.get(self.cls)
 
     def __str__(self):
-        return '{}:{}'.format(self.name, self.cls)
+        result = '{}:{}'.format(self.name, self.cls)
+        if self.vec_count_cls:
+            result = '{}+{}'.format(self.vec_count_cls, result)
+
+        if self.depends:
+            result = '{}?{}'.format(result, self.depends)
+
+        return result
+
+class Dependency:
+    def __init__(self, name, op, value):
+        self.name = name
+        self.op = op
+        self.value = value
+
+    def __str__(self):
+        return '{}?{}?{}'.format(self.name, self.op, self.value)
+
 
 def _parse_arg(string):
-    return ArgDefinition(*string.split(':'))
+    name, cls = string.split(':')
+    if '+' in cls:
+        vec_count_cls, cls = cls.split('+')
+    else:
+        vec_count_cls = None
+
+    if '?' in cls:
+        cls, depend_name, depend_op, depend_value = cls.split('?')
+        depends = Dependency(depend_name, depend_op, depend_value)
+    else:
+        depends = None
+
+    return ArgDefinition(name, cls, vec_count_cls, depends)
+
 
 def parse_str(string: str):
     string = re.sub(r'//[^\n]*', '', string)

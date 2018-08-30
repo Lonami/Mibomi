@@ -1,3 +1,11 @@
+server_difficulty#d difficulty:u8 -> Difficulty;
+
+resource_pack_status#18 status:vari32 -> ResourcePackStatus;
+
+disconnect#1a reason:str -> Disconnect;
+
+entity_status#1b id:i32 status:u8 -> EntityStatus;
+
 keep_alive#1f id:i64 -> KeepAlive;
 
 player_abilities#2c
@@ -8,4 +16,10 @@ player_position_and_look#2f
     x:double y:double z:double yaw:float pitch:float flags:u8 teleport_id:vari32
     -> PlayerPositionAndLook;
 
-disconnect#1a reason:str -> Disconnect;
+unlock_recipes#31
+    action:vari32 crafting_book_open:bool filtering_craftable:bool
+    recipe_ids:vari32+vari32
+    init_recipe_ids:vari32+vari32?action?==?0
+    -> UnlockRecipes;
+
+held_item_change#3a slot:u8 -> HeldItemChange;

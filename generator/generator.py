@@ -71,19 +71,46 @@ def _generate_read_method(f, indent, args):
                 f.write(',')
             f.write('=data.readfmt(')
             f.write(repr(fmt))
-            f.write(')\n')
+            f.write(')')
         else:
+            if group.depends:
+                f.write('if self.')
+                f.write(group.depends.name)
+                f.write(group.depends.op)
+                f.write(group.depends.value)
+                f.write(':\n')
+                indent += ' '
+                f.write(indent)
+
             f.write('self.')
             f.write(group.name)
             f.write('=')
-            if group.cls in _BUILTIN_CLS:
+
+            if group.vec_count_cls:
+                f.write('[')
+
+            if group.builtin_fmt:
+                raise NotImplementedError
+            elif group.cls in _BUILTIN_CLS:
                 f.write('data.read')
                 f.write(group.cls)
-                f.write('()\n')
+                f.write('()')
             else:
                 f.write(group.cls)
-                f.write('(data)\n')
+                f.write('(data)')
 
+            if group.vec_count_cls:
+                if group.vec_count_cls not in _BUILTIN_CLS:
+                    raise NotImplementedError
+
+                f.write(' for _ in range(data.read')
+                f.write(group.vec_count_cls)
+                f.write('())]')
+
+            if group.depends:
+                indent = indent[:-1]
+
+        f.write('\n')
 
 def _generate_write_method(f, indent, args):
     for group in _collapse_args(args):
@@ -95,14 +122,50 @@ def _generate_write_method(f, indent, args):
             f.write(','.join(x.name for x in  group))
             f.write(')\n')
         else:
-            if group.cls in _BUILTIN_CLS:
+            if group.depends:
+                f.write('if ')
+                f.write(group.depends.name)
+                f.write(group.depends.op)
+                f.write(group.depends.value)
+                f.write(':\n')
+                indent += ' '
+                f.write(indent)
+
+            name = group.name
+            if group.vec_count_cls:
+                if group.vec_count_cls not in _BUILTIN_CLS:
+                    raise NotImplementedError
+
+                f.write('_.write')
+                f.write(group.vec_count_cls)
+                f.write('(len(')
+                f.write(group.name)
+                f.write('))\n')
+
+                f.write(indent)
+                f.write('for _x in ')
+                f.write(group.name)
+                f.write(':\n')
+                indent += ' '
+                f.write(indent)
+                name = '_x'
+
+            if group.builtin_fmt:
+                raise NotImplementedError
+            elif group.cls in _BUILTIN_CLS:
                 f.write('_.write')
                 f.write(group.cls)
                 f.write('(')
-                f.write(group.name)
+                f.write(name)
                 f.write(')\n')
             else:
                 raise NotImplementedError
+
+            if group.vec_count_cls:
+                indent = indent[:-1]
+
+            if group.depends:
+                indent = indent[:-1]
 
 def _collapse_args(args):
     # Try collapsing bare types into a single fmt call.
@@ -110,7 +173,7 @@ def _collapse_args(args):
     # comes down to working with more than one value at once.
     collapsed = []
     for arg in args:
-        if arg.builtin_fmt:
+        if arg.builtin_fmt and not (arg.vec_count_cls or arg.depends):
             collapsed.append(arg)
         else:
             if collapsed:
