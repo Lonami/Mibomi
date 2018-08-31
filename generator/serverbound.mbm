@@ -1,5 +1,10 @@
 teleport_confirm#0 id:vari32 -> TeleportConfirm;
 
+tab_complete#1
+    text:str assume_command:bool has_position:bool
+    looked_at_block:pos?has_position?is?True
+    -> TabComplete;
+
 chat_message#2 message:str -> ChatMessage;
 
 client_status#3 action_id:vari32 -> ClientStatus;
@@ -9,11 +14,34 @@ client_settings#4
     displayed_skin_parts:u8 main_hand:vari32
     -> ClientSettings;
 
-plugin_message#9
-    channel:str data:bytes
-    -> PluginMessage;
+confirm_transaction#5
+    window_id:u8 action_number:i16 accepted:bool
+    -> ConfirmTransaction;
+
+enchant_item#6 window_id:u8 enchantment:u8 -> EnchantItem;
+
+click_window#7
+    window_id:u8 slot:i16 button:u8 action_number:i16
+    mode:vari32 clicked_item:slot
+    -> ClickWindow;
+
+close_window#8 id:u8 -> CloseWindow;
+
+plugin_message#9 channel:str data:bytes -> PluginMessage;
+
+// TODO Generated code could validate the flags
+use_entity#a
+    target:vari32
+    type:vari32
+    x:float?type?==?2
+    y:float?type?==?2
+    z:float?type?==?2
+    hand:vari32?type?in?[0,2]
+    -> UseEntity;
 
 keep_alive#b id:i64 -> KeepAlive;
+
+player#c on_ground:bool -> Player;
 
 player_position#d
     x:double y:double z:double on_ground:bool
@@ -22,3 +50,66 @@ player_position#d
 player_position_and_look#e
     x:double y:double z:double yaw:float pitch:float on_ground:bool
     -> PlayerPositionAndLook;
+
+player_look#f yaw:float pitch:float on_ground:bool -> PlayerLook;
+
+vehicle_move#10
+    x:double y:double z:double yaw:float pitch:float
+    -> VehicleMove;
+
+steer_boat#11
+    right_paddle_turning:bool left_paddle_turning:bool
+    -> SteerBoat;
+
+craft_recipe_request#12
+    window_id:u8 recipe:vari32 make_all:bool
+    -> CraftRecipeRequest;
+
+player_abilities#13
+    flags:u8 flying_speed:float walking_speed:float
+    -> PlayerAbilities;
+
+player_digging#14
+    status:vari32 location:pos face:u8
+    -> PlayerDigging;
+
+entity_action#15
+    entity_id:vari32 action_id:vari32 jump_boost:vari32
+    -> EntityAction;
+
+steer_vehicle#16
+    sideways:float forward:float flags:u8
+    -> SteerVehicle;
+
+crafting_book_data#17
+    type:vari32
+    recipe_id:i32?type?==?0
+    crafting_book_open:bool?type?==?1
+    crafting_filter:bool?type?==?1
+    -> CraftingBookData;
+
+resource_pack_status#18 result:vari32 -> ResourcePackStatus;
+
+advancement_tab#19
+    action:vari32 tab_id:str?action?==?0 -> AdvancementTab;
+
+held_item_change#1a slot:u16 -> HeldItemChange;
+
+creative_inventory_action#1b
+    slot:u16 clicked_item:slot
+    -> CreativeInventoryAction;
+
+update_sign#1c
+    location:pos line1:str line2:str line3:str line4:str
+    -> UpdateSign;
+
+animation#1d hand:vari32 -> Animation;
+
+spectate#1e target:uuid -> Spectate;
+
+player_block_placement#1f
+    location:pos face:vari32 hand:vari32
+    cursor_x:float cursor_y:float cursor_z:float
+    -> PlayerBlockPlacement;
+
+use_item#20 hand:vari32 -> UseItem;

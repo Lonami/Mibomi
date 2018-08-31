@@ -19,9 +19,9 @@ class TestDataRW(unittest.TestCase):
     def test_pos(self):
         dataw = DataRW()
         dataw.writevari32(340)
-        dataw.writepos(97, 98, 99)
-        dataw.writepos(-1, -2, 99)
-        dataw.writepos(98, 99, -1)
+        dataw.writepos((97, 98, 99))
+        dataw.writepos((-1, -2, 99))
+        dataw.writepos((98, 99, -1))
         datar = DataRW(dataw.getvalue())
         self.assertEqual(datar.readvari32(), 340)
         self.assertEqual(datar.readpos(), (97, 98, 99))

@@ -145,7 +145,7 @@ class DataRW(io.BytesIO):
             z -= 1 << 26
         return x, y, z
 
-    def writepos(self, x, y, z):
+    def writepos(self, xyz):
         """
         Writes a position.
         """
@@ -183,5 +183,11 @@ class DataRW(io.BytesIO):
     def readnbt(self):
         warnings.warn('read nbt is not implemented')
 
-    def writenbt(self):
+    def writenbt(self, value):
         warnings.warn('writing nbt is not implemented')
+
+    def readslot(self):
+        warnings.warn('read slot is not implemented')
+
+    def writeslot(self, value):
+        warnings.warn('writing slot is not implemented')

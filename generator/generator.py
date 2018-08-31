@@ -3,7 +3,7 @@ from . import parser
 
 _BUILTIN_CLS = {
     'vari32', 'vari64', 'uuid', 'str', 'bytes', 'angle', 'pos',
-    'entmeta', 'nbt'
+    'entmeta', 'nbt', 'slot'
 }
 
 
@@ -186,7 +186,11 @@ def _generate_write_method(f, indent, args):
                 name = '_x'
 
             if group.builtin_fmt:
-                raise NotImplementedError
+                f.write('_.writefmt(')
+                f.write(repr(group.builtin_fmt))
+                f.write(',')
+                f.write(name)
+                f.write(')\n')
             elif group.cls in _BUILTIN_CLS:
                 f.write('_.write')
                 f.write(group.cls)
