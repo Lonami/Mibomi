@@ -33,9 +33,9 @@ class DataRW(io.BytesIO):
 
     def readbytes(self):
         """
-        Reads a byte string of data.
+        Reads the remaining byte string of data.
         """
-        return self.read(self.readvari32())
+        return self.read()
 
     def writestr(self, value):
         """
@@ -43,7 +43,7 @@ class DataRW(io.BytesIO):
         """
         value = value.encode('utf-8')
         self.writevari32(len(value))
-        self.writebytes(value)
+        self.write(value)
 
     def writebytes(self, value):
         """

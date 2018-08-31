@@ -18,23 +18,25 @@ TYPE_TO_FMT = {
 
 
 class Definition:
-    def __init__(self, name, id, args, cls):
+    def __init__(self, name, id, args, cls, params):
         self.name = name
         self.id = id
         self.args = args
         self.cls = cls
+        self.params = params
 
     def __str__(self):
         return '{}#{:x}\n  {} -> {}'.format(
             self.name, self.id, '\n  '.join(map(str, self.args)), self.cls)
 
 class ArgDefinition:
-    def __init__(self, name, cls, vec_count_cls, depends):
+    def __init__(self, name, cls, vec_count_cls, depends, args):
         self.name = name
         self.cls = cls
         self.vec_count_cls = vec_count_cls
         self.depends = depends
         self.builtin_fmt = TYPE_TO_FMT.get(self.cls)
+        self.args = args  # arguments when calling self.cls()
 
     def __str__(self):
         result = '{}:{}'.format(self.name, self.cls)
@@ -63,13 +65,18 @@ def _parse_arg(string):
     else:
         vec_count_cls = None
 
+    if '@' in cls:
+        cls, *args = cls.split('@')
+    else:
+        args = ()
+
     if '?' in cls:
         cls, depend_name, depend_op, depend_value = cls.split('?')
         depends = Dependency(depend_name, depend_op, depend_value)
     else:
         depends = None
 
-    return ArgDefinition(name, cls, vec_count_cls, depends)
+    return ArgDefinition(name, cls, vec_count_cls, depends, args)
 
 
 def parse_str(string: str):
@@ -83,6 +90,11 @@ def parse_str(string: str):
 
         left, cls = definition.split('->')
         left, *args = left.split()
+        if '?' in left:
+            left, *params = left.split('?')
+        else:
+            params = ()
+
         if '#' in left:
             name, id = left.split('#')
             id = int(id, 16)
@@ -90,4 +102,4 @@ def parse_str(string: str):
             name, id = left, None
 
         yield Definition(
-            name.strip(), id, [_parse_arg(x) for x in args], cls.strip())
+            name.strip(), id, list(map(_parse_arg, args)), cls.strip(), params)

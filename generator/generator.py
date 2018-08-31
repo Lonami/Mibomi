@@ -25,13 +25,18 @@ def generate_class(f, definition, indent=''):
     f.write('\n')
 
     f.write(indent)
-    f.write(' def __init__(self,data):\n')
+    f.write(' def __init__(self,data')
+    for param in definition.params:
+        f.write(',')
+        f.write(param)
+    f.write('):\n')
 
     f.write(indent)
     if not definition.args:
         f.write('  pass\n')
     else:
-        _generate_read_method(f, indent + '  ', definition.args)
+        _generate_read_method(
+            f, indent + '  ', definition.args, definition.params)
 
     if definition.id is not None:
         f.write(indent)
@@ -43,6 +48,9 @@ def generate_class(f, definition, indent=''):
 
 
 def generate_method(f, definition, indent=''):
+    if definition.params:
+        raise NotImplementedError
+
     f.write(indent)
     f.write('async def ')
     f.write(definition.name)
@@ -63,7 +71,7 @@ def generate_method(f, definition, indent=''):
     f.write('_.getvalue())\n')
 
 
-def _generate_read_method(f, indent, args):
+def _generate_read_method(f, indent, args, params):
     for group in _collapse_args(args):
         f.write(indent)
         if isinstance(group, list):
@@ -78,7 +86,9 @@ def _generate_read_method(f, indent, args):
             f.write(')')
         else:
             if group.depends:
-                f.write('if self.')
+                f.write('if ')
+                if group.depends.name not in params:
+                    f.write('self.')
                 f.write(group.depends.name)
                 f.write(' ')
                 f.write(group.depends.op)
@@ -105,12 +115,7 @@ def _generate_read_method(f, indent, args):
 
                 f.write('[')
 
-            if group.builtin_fmt:
-                f.write('data.readfmt(')
-                f.write(repr(group.builtin_fmt))
-                f.write(')[0]')
-            else:
-                _generate_read1(f, group.cls)
+            _generate_read1(f, group.cls, group.args)
 
             if group.vec_count_cls:
                 f.write(' for _ in range(')
@@ -123,7 +128,7 @@ def _generate_read_method(f, indent, args):
         f.write('\n')
 
 
-def _generate_read1(f, cls):
+def _generate_read1(f, cls, args=()):
     if cls in parser.TYPE_TO_FMT:
         f.write('data.readfmt(')
         f.write(repr(parser.TYPE_TO_FMT[cls]))
@@ -134,7 +139,11 @@ def _generate_read1(f, cls):
         f.write('()')
     else:
         f.write(cls)
-        f.write('(data)')
+        f.write('(data')
+        for arg in args:
+            f.write(',self.')
+            f.write(arg)
+        f.write(')')
 
 def _generate_write_method(f, indent, args):
     for group in _collapse_args(args):

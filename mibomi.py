@@ -86,7 +86,7 @@ async def main():
         task = loop.create_task(loop_keys())
 
         # username = input('Enter player name: ')
-        username = 'Memelord'
+        username = 'Mibomi'
         print('Logging in...', end='', flush=True)
         await client.handshake(mibomi.enums.HandshakeState.LOGIN)
         await client.login(username, access_token, profile_id)

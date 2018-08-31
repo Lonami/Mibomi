@@ -1,11 +1,25 @@
+// Documentation can be found at
+// https://wiki.vg/index.php?title=Protocol&oldid=14204#Clientbound_2
 spawn_object#0
     id:vari32 uuid:uuid type:u8 x:double y:double z:double
     pitch:angle yaw:angle data:i32 vx:i16 y:i16 z:i16 -> SpawnObject;
+
+spawn_exp_orb#1
+    id:vari32 x:double y:double z:double count:i16
+    -> SpawnExpOrb;
+
+spawn_global_entity#2
+    id:vari32 type:u8 x:double y:double z:double
+    -> SpawnGlobalEntity;
 
 spawn_mob#3
     id:vari32 uuid:uuid type:vari32 x:double y:double z:double
     yaw:angle pitch:angle head_pitch:angle vx:i16 y:i16 z:i16 metadata:entmeta
     -> SpawnMob;
+
+spawn_painting#4
+    id:vari32 uuid:uuid title:str location:pos direction:u8
+    -> SpawnPainting;
 
 spawn_player#5
     id:vari32 uuid:uuid x:double y:double z:double
@@ -14,17 +28,62 @@ spawn_player#5
 
 animation#6 id:vari32 animation:u8 -> Animation;
 
+// TODO a way to define maps would be nice;
+// maybe it should be generator-dependant? optimize these
+statistic name:str value:vari32 -> Statistic;
+statistics#7 statistics:vari32+Statistic -> Statistics;
+
+block_break_animation#8
+    entity_id:vari32 location:pos destroy_stage:u8
+    -> BlockBreakAnimation;
+
+update_block_entity#9
+    location:pos action:u8 nbt:nbt
+    -> UpdateBlockEntity;
+
+block_action#a
+    location:pos action_id:u8 action_param:u8 block_type:vari32
+    -> BlockAction;
+
 block_change#b location:pos id:vari32 -> BlockChange;
 
+boss_bar#c
+    uuid:uuid
+    action:vari32
+    title:str?action?==?0
+    health:float?action?==?0
+    color:vari32?action?==?0
+    division:vari32?action?==?0
+    flags:u8?action?==?0
+
+    health:float?action?==?2
+    title:str?action?==?3
+    color:vari32?action?==?4
+    division:vari32?action?==?4
+    flags:u8?action?==?5
+    -> BossBar;
+
 server_difficulty#d difficulty:u8 -> Difficulty;
+
+tab_complete#e matches:vari32+str -> TabComplete;
 
 chat_message#f data:str position:u8 -> ChatMessage;
 
 record h_pos:u8 y:u8 block_id:vari32 -> Record;
-
 multi_block_change#10
     chunk_x:i32 chunk_z:i32 records:vari32+Record
     -> MultiBlockChange;
+
+confirm_transaction#11
+    window_id:u8 action:i16 accepted:bool
+    -> ConfirmTransaction;
+
+close_window#12 id:u8 -> CloseWindow;
+
+open_window#13
+    id:u8 type:str title:str slot_count:u8
+    entity_id:i32?type?==?'EntityHorse'
+    -> OpenWindow;
 
 slot
     block_id:i16
@@ -32,22 +91,40 @@ slot
     item_damage:i16?block_id?!=?-1
     nbt:u8?block_id?!=?-1
     -> Slot;
-
 window_items#14
     id:u8 slot:i16+Slot
     -> WindowItems;
+
+window_property#15
+    id:u8 property:i16 value:i16
+    -> WindowProperty;
 
 set_slot#16
     window_id:u8 slot:i16 slot_data:Slot
     -> SetSlot;
 
-resource_pack_status#18 status:vari32 -> ResourcePackStatus;
+set_cooldown#17 item_id:vari32 ticks:vari32 -> SetCooldown;
+
+plugin_message#18 channel:str data:bytes -> PluginMessage;
+
+named_sound_effect#19
+    name:str category:vari32 x:i32 y:i32 z:i32
+    volume:float pitch:float
+    -> NamedSoundEffect;
 
 disconnect#1a reason:str -> Disconnect;
 
 entity_status#1b id:i32 status:u8 -> EntityStatus;
 
+explosion_record x:i8 y:i8 z:i8 -> ExplosionRecord;
+explosion#1c x:float y:float z:float radius:float
+    records:i32+ExplosionRecord
+    vx:float vy:float vz:float
+    -> Explosion;
+
 unload_chunk#1d x:i16 z:i16 -> UnloadChunk;
+
+change_game_state#1e reason:u8 value:float -> ChangeGameState;
 
 keep_alive#1f id:i64 -> KeepAlive;
 
@@ -56,10 +133,34 @@ chunk_data#20
     data:vari32+u8 block_entities:vari32+nbt
     -> ChunkData;
 
+effect#21
+    id:i32 location:pos data:i32 disable_relative_volume:bool
+    -> Effect;
+
+particle#22
+    id:i32 long_distance:bool x:float y:float z:float
+    offset_x:float offset_y:float offset_z:float data:float
+    count:i32
+    param1:vari32?id?in?[36,37,38,46]
+    param2:vari32?id?==?36
+    -> Particle;
+
 join_game#23
     id:i32 gamemode:u8 dimension:i32 difficulty:u8
     max_players:u8 level_type:str reduced_debug_info:bool
     -> JoinGame;
+
+map_icon dir_type:u8 x:u8 z:u8 -> MapIcon;
+map#24
+    item_damage:vari32 scale:i8 tracking_position:bool
+    icons:vari32+MapIcon columns:u8
+    rows:u8?columns?>?0
+    x:i8?columns?>?0
+    y:i8?columns?>?0
+    data:vari32+nbt?columns?>?0
+    -> Map;
+
+entity#25 id:vari32 -> Entity;
 
 entity_relative_move#26
     id:vari32 dx:i16 dy:i16 dz:i16 on_ground:bool
@@ -72,6 +173,16 @@ entity_look_and_relative_move#27
 entity_look#28
     id:vari32 yaw:angle pitch:angle on_ground:bool
     -> EntityLook;
+
+vehicle_move#29
+    x:double y:double z:double yaw:float pitch:float
+    -> VehicleMove;
+
+open_sign_editor#2a location:pos -> OpenSignEditor;
+
+craft_recipe_response#2b
+    window_id:u8 recipe:vari32
+    -> CraftRecipeResponse;
 
 player_abilities#2c
     flags:u8 flying_speed:float fov_modifier:float
@@ -86,9 +197,39 @@ combat_event#2d
     message:str?event?==?2
     -> CombatEvent;
 
+player_property
+    name:str value:str signed:bool signature:str?signed?is?True
+    -> PlayerProperty;
+
+// TODO Must conditionals apply always to the rest
+// Maybe the conditional should be a single parameter
+// and all below apply
+player?action
+    uuid:uuid
+
+    name:str?action?==?0
+    properties:vari32+PlayerProperty?action?==?0
+    gamemode:vari32?action?==?0
+    ping:vari32?action?==?0
+    has_display_name:bool?action?==?0
+
+    gamemode:vari32?action?==?1
+    ping:vari32?action?==?2
+
+    has_display_name:bool?action?==?3
+    display_name:str?has_display_name?is?True // also for 0
+
+    -> Player;
+player_list_item#2e
+    action:vari32
+    players:vari32+Player@action
+    -> PlayerListItem;
+
 player_position_and_look#2f
     x:double y:double z:double yaw:float pitch:float flags:u8 teleport_id:vari32
     -> PlayerPositionAndLook;
+
+use_bed#30 entity_id:vari32 location:pos -> UseBed;
 
 unlock_recipes#31
     action:vari32 crafting_book_open:bool filtering_craftable:bool
@@ -98,9 +239,21 @@ unlock_recipes#31
 
 destroy_entities#32 ids:vari32+vari32 -> DestroyEntities;
 
+remove_entity_effect#33 id:vari32 effect:u8 -> RemoveEntityEffect;
+
+resource_pack_send#34 url:str hash:str -> ResourcePackSend;
+
+respawn#35
+    dimension:i32 difficulty:u8 gamemode:u8 level_type:str
+    -> Respawn;
+
 entity_head_look#36
     id:vari32 head_yaw:angle
     -> EntityHeadLook;
+
+select_advancement_tab#37
+    has_id:bool id:str?has_id?is?True
+    -> SelectAdvancementTab;
 
 world_border#38
     action:vari32
@@ -134,9 +287,11 @@ world_border#38
 
     -> WorldBorder;
 
+camera#39 id:vari32 -> Camera;
 held_item_change#3a slot:u8 -> HeldItemChange;
-
+display_scoreboard#3b position:i8 name:str -> DisplayScoreboard;
 entity_metadata#3c id:vari32 metadata:entmeta -> EntityMetadata;
+attach_entity#3d attached_id:i32 holding_id:i32 -> AttachEntity;
 entity_velocity#3e id:vari32 vx:i16 vy:i16 vz:i16 -> EntityVelocity;
 entity_equipment#3f id:vari32 slot:vari32 item:Slot -> EntityEquipment;
 
@@ -148,23 +303,70 @@ update_health#41
     health:float food:vari32 food_saturation:float
     -> UpdateHealth;
 
+scoreboard_objective#42
+    objective:str mode:u8
+    value:str?mode?in?[0,2]
+    type:str?mode?in?[0,2]
+    -> ScoreboardObjective;
+
+set_passengers#43
+    id:vari32 passengers:vari32+vari32
+    -> SetPassengers;
+
+teams#44
+    name:str
+    mode:u8
+
+    display:str?mode?==?0
+    prefix:str?mode?==?0
+    suffix:str?mode?==?0
+    friendly_flags:u8?mode?==?0
+    name_tag_visibility:str?mode?==?0
+    collision_rule:str?mode?==?0
+    color:i8?mode?==?0
+    entities:vari32+str?mode?==?0
+
+    display:str?mode?==?2
+    prefix:str?mode?==?2
+    suffix:str?mode?==?2
+    friendly_flags:u8?mode?==?2
+    name_tag_visibility:str?mode?==?2
+    collision_rule:str?mode?==?2
+    color:i8?mode?==?2
+
+    entities:vari32+str?mode?==?3
+    entities:vari32+str?mode?==?4
+    -> Teams;
+
+update_score#45
+    entity_name:str action:u8 objective:str value:vari32?action?!=?1
+    -> UpdateScore;
+
 spawn_position#46 location:pos -> SpawnPosition;
 
-time_update#47
-    world_age:i64 time_of_day:i64
-    -> TimeUpdate;
+time_update#47 world_age:i64 time_of_day:i64 -> TimeUpdate;
 
-modifier
-    uuid:uuid amount:double operation:u8
-    -> Modifier;
-
-entity_property
-    key:str value:double modifiers:vari32+Modifier
-    -> EntityProperty;
+title#48
+    action:vari32
+    title:str?action?==?0
+    subtitle:str?action?==?1
+    action_bar:str?action?==?2
+    fade_in:i32?action?==?3
+    stay:i32?action?==?3
+    fade_out:i32?action?==?3
+    -> Title;
 
 sound_effect#49
     id:vari32 category:vari32 x:i32 y:i32 z:i32 volume:float pitch:float
     -> SoundEffect;
+
+player_list_header_and_footer#4a
+    header:str footer:str
+    -> PlayerListHeaderAndFooter;
+
+collect_item#4b
+    collected_id:vari32 collector_id:vari32 pickup_count:vari32
+    -> CollectItem;
 
 entity_teleport#4c
     id:vari32 x:double y:double z:double yaw:angle pitch:angle on_ground:bool
@@ -201,6 +403,18 @@ advancements#4d
 
 // ^ ADVANCEMENTS
 
+modifier
+    uuid:uuid amount:double operation:u8
+    -> Modifier;
+
+entity_property
+    key:str value:double modifiers:vari32+Modifier
+    -> EntityProperty;
+
 entity_properties#4e
     id:vari32 properties:i32+EntityProperty
     -> EntityProperties;
+
+entity_effect#4f
+    entity_id:vari32 effect_id:u8 amplifier:u8 duration:vari32 flags:u8
+    -> EntityEffect;
