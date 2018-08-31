@@ -7,204 +7,123 @@ _BUILTIN_CLS = {
 }
 
 
-def generate_class(f, definition, indent=''):
-    f.write(indent)
-    f.write('class ')
-    f.write(definition.cls)
-    f.write('(ServerType):\n')
+def generate_class(gen, definition):
+    with gen.block('class {}(ServerType):', definition.cls):
+        if definition.id is not None:
+            gen.writeln('ID = 0x{:x}', definition.id)
+
+        gen.writeln('NAME = {!r}', definition.name)
+        with gen.meth('__init__', 'data', *definition.params):
+            if not definition.args:
+                gen.writeln('pass')
+            else:
+                _generate_read_method(gen, definition)
 
     if definition.id is not None:
-        f.write(indent)
-        f.write(' ID=')
-        f.write(hex(definition.id))
-        f.write('\n')
-
-    f.write(indent)
-    f.write(' NAME=')
-    f.write(repr(definition.name))
-    f.write('\n')
-
-    f.write(indent)
-    f.write(' def __init__(self,data')
-    for param in definition.params:
-        f.write(',')
-        f.write(param)
-    f.write('):\n')
-
-    f.write(indent)
-    if not definition.args:
-        f.write('  pass\n')
-    else:
-        _generate_read_method(
-            f, indent + '  ', definition.args, definition.params)
-
-    if definition.id is not None:
-        f.write(indent)
-        f.write('TYPES[')
-        f.write(hex(definition.id))
-        f.write(']=')
-        f.write(definition.cls)
-        f.write('\n')
+        gen.writeln('TYPES[0x{:x}] = {}', definition.id, definition.cls)
 
 
-def generate_method(f, definition, indent=''):
+def generate_method(gen, definition):
     if definition.params:
         raise NotImplementedError
 
-    f.write(indent)
-    f.write('async def ')
-    f.write(definition.name)
-    f.write('(self')
-    for arg in definition.args:
-        f.write(',')
-        f.write(arg.name)
-    f.write('):\n')
-
-    f.write(indent)
-    f.write(' _=datarw.DataRW()\n')
-    _generate_write_method(f, indent + ' ', definition.args)
-
-    f.write(indent)
-    f.write(' await self.send(')
-    f.write(hex(definition.id))
-    f.write(',')
-    f.write('_.getvalue())\n')
+    with gen.ameth(definition.name, *(x.name for x in definition.args)):
+        gen.writeln('_ = datarw.DataRW()')
+        _generate_write_method(gen, definition)
+        gen.writeln('await self.send(0x{:x}, _.getvalue())', definition.id)
 
 
-def _generate_read_method(f, indent, args, params):
-    for group in _collapse_args(args):
-        f.write(indent)
+def _generate_read_method(gen, definition):
+    for group in _collapse_args(definition.args):
         if isinstance(group, list):
             fmt = ''
             for arg in group:
                 fmt += arg.builtin_fmt
-                f.write('self.')
-                f.write(arg.name)
-                f.write(',')
-            f.write('=data.readfmt(')
-            f.write(repr(fmt))
-            f.write(')')
+                gen.write('self.{}, ', arg.name)
+            gen.write('= data.readfmt({!r})', fmt)
         else:
+            dep_block = gen.empty()
             if group.depends:
-                f.write('if ')
-                if group.depends.name not in params:
-                    f.write('self.')
-                f.write(group.depends.name)
-                f.write(' ')
-                f.write(group.depends.op)
-                f.write(' ')
-                f.write(group.depends.value)
-                f.write(':\n')
-                indent += ' '
-                f.write(indent)
+                gen.write('if ')
+                dep = group.depends
+                if dep.name not in definition.params:
+                    gen.write('self.')
 
-            f.write('self.')
-            f.write(group.name)
-            f.write('=')
+                dep_block = gen.block('{} {} {}:', dep.name, dep.op, dep.value)
+                dep_block.__enter__()
+
+            gen.write('self.{} = ', group.name)
 
             if group.vec_count_cls:
                 # Special case vectors of u8 as byte strings
                 if group.cls == 'u8':
-                    f.write('data.read(')
-                    _generate_read1(f, group.vec_count_cls)
-                    f.write(')\n')
-                    # TODO This is getting messy
-                    if group.depends:
-                        indent = indent[:-1]
-                    continue
+                    gen.write('data.read(')
+                    _generate_read1(gen, group.vec_count_cls)
+                    gen.writeln(')')
+                    dep_block.__exit__()
+                    return
+                else:
+                    gen.write('[')
 
-                f.write('[')
-
-            _generate_read1(f, group.cls, group.args)
+            _generate_read1(gen, group.cls, group.args)
 
             if group.vec_count_cls:
-                f.write(' for _ in range(')
-                _generate_read1(f, group.vec_count_cls)
-                f.write(')]')
+                gen.write(' for _ in range(')
+                _generate_read1(gen, group.vec_count_cls)
+                gen.write(')]')
 
-            if group.depends:
-                indent = indent[:-1]
+            dep_block.__exit__()
 
-        f.write('\n')
+        gen.writeln()
 
 
-def _generate_read1(f, cls, args=()):
+def _generate_read1(gen, cls, args=()):
     if cls in parser.TYPE_TO_FMT:
-        f.write('data.readfmt(')
-        f.write(repr(parser.TYPE_TO_FMT[cls]))
-        f.write(')[0]')
+        gen.write('data.readfmt({!r})[0]', parser.TYPE_TO_FMT[cls])
     elif cls in _BUILTIN_CLS:
-        f.write('data.read')
-        f.write(cls)
-        f.write('()')
+        gen.write('data.read{}()', cls)
     else:
-        f.write(cls)
-        f.write('(data')
+        gen.write('{}(data', cls)
         for arg in args:
-            f.write(',self.')
-            f.write(arg)
-        f.write(')')
+            gen.write(', self.{}', arg)
+        gen.write(')')
 
-def _generate_write_method(f, indent, args):
-    for group in _collapse_args(args):
-        f.write(indent)
+def _generate_write_method(gen, definition):
+    for group in _collapse_args(definition.args):
         if isinstance(group, list):
-            f.write('_.writefmt(')
-            f.write(repr(''.join(x.builtin_fmt for x in group)))
-            f.write(',')
-            f.write(','.join(x.name for x in  group))
-            f.write(')\n')
+            gen.writeln('_.writefmt({!r}, {})',
+                        ''.join(x.builtin_fmt for x in group),
+                        ','.join(x.name for x in group))
         else:
+            dep_block = gen.empty()
             if group.depends:
-                f.write('if ')
-                f.write(group.depends.name)
-                f.write(' ')
-                f.write(group.depends.op)
-                f.write(' ')
-                f.write(group.depends.value)
-                f.write(':\n')
-                indent += ' '
-                f.write(indent)
+                gen.write('if ')
+                dep = group.depends
+                dep_block = gen.block('{} {} {}:', dep.name, dep.op, dep.value)
+                dep_block.__enter__()
 
             name = group.name
+            vec_block = gen.empty()
             if group.vec_count_cls:
                 if group.vec_count_cls not in _BUILTIN_CLS:
                     raise NotImplementedError
 
-                f.write('_.write')
-                f.write(group.vec_count_cls)
-                f.write('(len(')
-                f.write(group.name)
-                f.write('))\n')
+                gen.writeln(
+                    '_.write{}(len({}))', group.vec_count_cls, group.name)
 
-                f.write(indent)
-                f.write('for _x in ')
-                f.write(group.name)
-                f.write(':\n')
-                indent += ' '
-                f.write(indent)
                 name = '_x'
+                vec_block = gen.block('for _x in {}:', group.name)
+                vec_block.__enter__()
 
             if group.builtin_fmt:
-                f.write('_.writefmt(')
-                f.write(repr(group.builtin_fmt))
-                f.write(',')
-                f.write(name)
-                f.write(')\n')
+                gen.writeln('_.writefmt({!r}, {})', group.builtin_fmt, name)
             elif group.cls in _BUILTIN_CLS:
-                f.write('_.write')
-                f.write(group.cls)
-                f.write('(')
-                f.write(name)
-                f.write(')\n')
+                gen.writeln('_.write{}({})', group.cls, name)
             else:
                 raise NotImplementedError
 
-            if group.vec_count_cls:
-                indent = indent[:-1]
-
-            if group.depends:
-                indent = indent[:-1]
+            vec_block.__exit__()
+            dep_block.__exit__()
 
 def _collapse_args(args):
     # Try collapsing bare types into a single fmt call.
