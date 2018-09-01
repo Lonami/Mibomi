@@ -2,8 +2,13 @@ import io
 import struct
 import uuid
 import warnings
+import collections
 
 from . import nbt
+
+
+Position = collections.namedtuple('Position', ['x', 'y', 'z'])
+Rotation = collections.namedtuple('Rotation', ['x', 'y', 'z'])
 
 
 # https://docs.python.org/3/library/struct.html#format-characters
@@ -143,7 +148,7 @@ class DataRW(io.BytesIO):
             y -= 1 << 12
         if z >= (1 << 25):
             z -= 1 << 26
-        return x, y, z
+        return Position(x, y, z)
 
     def writepos(self, xyz):
         """
@@ -169,10 +174,46 @@ class DataRW(io.BytesIO):
         self.write(value)
 
     def readentmeta(self):
-        warnings.warn('read entity metadata is not implemented')
+        result = []
+        while True:
+            index = self.read(1)[0]
+            if index == 0xff:
+                return result
+            cls = self.readvari32()
+            if cls == 0:
+                value = self.read(1)[0]
+            elif cls == 1:
+                value = self.readvari32()
+            elif cls == 2:
+                (value,) = self.readfmt('f')
+            elif cls == 3:
+                value = self.readstr()
+            elif cls == 4:
+                value = self.readstr()  # Chat
+            elif cls == 5:
+                value = self.readslot()
+            elif cls == 6:
+                (value,) = self.readfmt('?')
+            elif cls == 7:
+                value = Rotation(*self.readfmt('fff'))
+            elif cls == 8:
+                value = self.readpos()
+            elif cls == 9:
+                value = self.readpos() if self.readfmt('?')[0] else None
+            elif cls == 10:
+                value = self.readvari32()  # Direction
+            elif cls == 11:
+                value = self.readuuid() if self.readfmt('?')[0] else None
+            elif cls == 12:
+                value = self.readvari32() if self.readfmt('?')[0] else None
+            elif cls == 13:
+                value = self.readnbt()
+            else:
+                raise ValueError('invalid entmeta type {}'.format(cls))
+            result.append((index, value))
 
     def writeentmeta(self, value):
-        warnings.warn('write entity metadata is not implemented')
+        raise NotImplementedError
 
     def readnbt(self):
         return nbt.read(self)
