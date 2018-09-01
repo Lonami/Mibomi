@@ -17,11 +17,11 @@ if __name__ == '__main__':
                 gen.writeln('return x.getvalue().rstrip()')
 
         for definition in generator.parser.parse_str(fin.read()):
-            generator.generator.generate_class(gen, definition)
+            pass  # generator.generator.generate_class(gen, definition)
 
     with open('generator/serverbound.mbm') as fin, \
             generator.pygen.PyGen(open('mibomi/requester.py', 'w')) as gen:
         gen.writeln('from . import connection, datarw')
         with gen.block('class Requester(connection.Connection):'):
             for definition in generator.parser.parse_str(fin.read()):
-                generator.generator.generate_method(gen, definition)
+                pass  # generator.generator.generate_method(gen, definition)

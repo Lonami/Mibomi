@@ -48,19 +48,13 @@ block_action#a
 block_change#b location:pos id:vari32 -> BlockChange;
 
 boss_bar#c
-    uuid:uuid
-    action:vari32
-    title:str?action?==?0
-    health:float?action?==?0
-    color:vari32?action?==?0
-    division:vari32?action?==?0
-    flags:u8?action?==?0
-
-    health:float?action?==?2
-    title:str?action?==?3
-    color:vari32?action?==?4
-    division:vari32?action?==?4
-    flags:u8?action?==?5
+    uuid:uuid action:vari32 title:str health:float
+    color:vari32 division:vari32 flags:u8
+    ?action?==?0 title health color division flags
+    ?action?==?2 health
+    ?action?==?3 title
+    ?action?==?4 color division
+    ?action?==?5 flags
     -> BossBar;
 
 server_difficulty#d difficulty:u8 -> Difficulty;
@@ -81,15 +75,13 @@ confirm_transaction#11
 close_window#12 id:u8 -> CloseWindow;
 
 open_window#13
-    id:u8 type:str title:str slot_count:u8
-    entity_id:i32?type?==?'EntityHorse'
+    id:u8 type:str title:str slot_count:u8 entity_id:i32
+    ?type?==?'EntityHorse' entity_id
     -> OpenWindow;
 
 slot
-    block_id:i16
-    item_count:i8?block_id?!=?-1
-    item_damage:i16?block_id?!=?-1
-    nbt:u8?block_id?!=?-1
+    block_id:i16 item_count:i8 item_damage:i16 nbt:nbt
+    ?block_id?!=?-1 item_count item_damage nbt
     -> Slot;
 window_items#14
     id:u8 slot:i16+Slot
@@ -140,9 +132,9 @@ effect#21
 particle#22
     id:i32 long_distance:bool x:float y:float z:float
     offset_x:float offset_y:float offset_z:float data:float
-    count:i32
-    param1:vari32?id?in?[36,37,38,46]
-    param2:vari32?id?==?36
+    count:i32 param1:vari32 param2:vari32
+    ?id?in?[36,37,38,46] param1
+    ?id?==?36 param2
     -> Particle;
 
 join_game#23
@@ -153,11 +145,8 @@ join_game#23
 map_icon dir_type:u8 x:u8 z:u8 -> MapIcon;
 map#24
     item_damage:vari32 scale:i8 tracking_position:bool
-    icons:vari32+MapIcon columns:u8
-    rows:u8?columns?>?0
-    x:i8?columns?>?0
-    y:i8?columns?>?0
-    data:vari32+nbt?columns?>?0
+    icons:vari32+MapIcon columns:u8 rows:u8 x:i8 y:i8 data:vari32+nbt
+    ?columns?>?0 rows x y data
     -> Map;
 
 entity#25 id:vari32 -> Entity;
@@ -189,36 +178,22 @@ player_abilities#2c
     -> PlayerAbilities;
 
 combat_event#2d
-    event:vari32
-    duration:vari32?event?==?1
-    entity_id:i32?event?==?1
-    player_id:vari32?event?==?2
-    entity_id:i32?event?==?2
-    message:str?event?==?2
+    event:vari32 duration:vari32 player_id:vari32 entity_id:i32 message:str
+    ?event?==?1 duration entity_id
+    ?event?==?2 player_id entity_id message
     -> CombatEvent;
 
 player_property
-    name:str value:str signed:bool signature:str?signed?is?True
+    name:str value:str signature:str?
     -> PlayerProperty;
 
-// TODO Must conditionals apply always to the rest
-// Maybe the conditional should be a single parameter
-// and all below apply
 player?action
-    uuid:uuid
-
-    name:str?action?==?0
-    properties:vari32+PlayerProperty?action?==?0
-    gamemode:vari32?action?==?0
-    ping:vari32?action?==?0
-    has_display_name:bool?action?==?0
-
-    gamemode:vari32?action?==?1
-    ping:vari32?action?==?2
-
-    has_display_name:bool?action?==?3
-    display_name:str?has_display_name?is?True // also for 0
-
+    uuid:uuid name:str properties:vari32+PlayerProperty
+    gamemode:vari32 ping:vari32 display_name:str?
+    ?action?==?0 name properties gamemode ping display_name
+    ?action?==?1 gamemode
+    ?action?==?2 ping
+    ?action?==?3 display_name
     -> Player;
 player_list_item#2e
     action:vari32
@@ -234,7 +209,8 @@ use_bed#30 entity_id:vari32 location:pos -> UseBed;
 unlock_recipes#31
     action:vari32 crafting_book_open:bool filtering_craftable:bool
     recipe_ids:vari32+vari32
-    init_recipe_ids:vari32+vari32?action?==?0
+    init_recipe_ids:vari32+vari32
+    ?action?==?0 init_recipe_ids
     -> UnlockRecipes;
 
 destroy_entities#32 ids:vari32+vari32 -> DestroyEntities;
@@ -251,40 +227,19 @@ entity_head_look#36
     id:vari32 head_yaw:angle
     -> EntityHeadLook;
 
-select_advancement_tab#37
-    has_id:bool id:str?has_id?is?True
-    -> SelectAdvancementTab;
+select_advancement_tab#37 id:str? -> SelectAdvancementTab;
 
 world_border#38
-    action:vari32
-    // set size
-    diameter:double?action?==?0
-
-    // lerp size
-    old_diameter:double?action?==?1
-    new_diameter:double?action?==?1
-    speed:vari64?action?==?1
-
-    // set center
-    x:double?action?==?2
-    z:double?action?==?2
-
-    // initialize
-    x:double?action?==?3
-    z:double?action?==?3
-    old_diameter:double?action?==?3
-    new_diameter:double?action?==?3
-    speed:vari64?action?==?3
-    portal_tp_boundary:vari32?action?==?3
-    warning_time:vari32?action?==?3
-    warning_blocks:vari32?action?==?3
-
-    // set warning time
-    warning_time:vari32?action?==?4
-
-    // set warning blocks
-    warning_blocks:vari32?action?==?5
-
+    action:vari32 x:double z:double diameter:double
+    old_diameter:double new_diameter:double speed:vari64
+    portal_tp_boundary:vari32 warning_time:vari32 warning_blocks:vari32
+    ?action?==?0 diameter
+    ?action?==?1 old_diameter new_diameter speed
+    ?action?==?2 x z
+    ?action?==?3 x z old_diameter new_diameter speed
+                 portal_tp_boundary warning_time warning_blocks
+    ?action?==?4 warning_time
+    ?action?==?5 warning_blocks
     -> WorldBorder;
 
 camera#39 id:vari32 -> Camera;
@@ -304,9 +259,8 @@ update_health#41
     -> UpdateHealth;
 
 scoreboard_objective#42
-    objective:str mode:u8
-    value:str?mode?in?[0,2]
-    type:str?mode?in?[0,2]
+    objective:str mode:u8 value:str type:str
+    ?mode?in?[0,2] value type
     -> ScoreboardObjective;
 
 set_passengers#43
@@ -314,32 +268,18 @@ set_passengers#43
     -> SetPassengers;
 
 teams#44
-    name:str
-    mode:u8
-
-    display:str?mode?==?0
-    prefix:str?mode?==?0
-    suffix:str?mode?==?0
-    friendly_flags:u8?mode?==?0
-    name_tag_visibility:str?mode?==?0
-    collision_rule:str?mode?==?0
-    color:i8?mode?==?0
-    entities:vari32+str?mode?==?0
-
-    display:str?mode?==?2
-    prefix:str?mode?==?2
-    suffix:str?mode?==?2
-    friendly_flags:u8?mode?==?2
-    name_tag_visibility:str?mode?==?2
-    collision_rule:str?mode?==?2
-    color:i8?mode?==?2
-
-    entities:vari32+str?mode?==?3
-    entities:vari32+str?mode?==?4
+    name:str mode:u8 display:str prefix:str suffix:str friendly_flags:u8
+    name_tag_visibility:str collision_rule:str color:i8 entities:vari32+str
+    ?mode?==?0 display prefix suffix friendly_flags name_tag_visibility
+               collision_rule color entities
+    ?mode?==?2 display prefix suffix friendly_flags name_tag_visibility
+               collision_rule color
+    ?mode?in?[3,4] entities
     -> Teams;
 
 update_score#45
-    entity_name:str action:u8 objective:str value:vari32?action?!=?1
+    entity_name:str action:u8 objective:str value:vari32
+    ?action?!=?1 value
     -> UpdateScore;
 
 spawn_position#46 location:pos -> SpawnPosition;
@@ -347,13 +287,12 @@ spawn_position#46 location:pos -> SpawnPosition;
 time_update#47 world_age:i64 time_of_day:i64 -> TimeUpdate;
 
 title#48
-    action:vari32
-    title:str?action?==?0
-    subtitle:str?action?==?1
-    action_bar:str?action?==?2
-    fade_in:i32?action?==?3
-    stay:i32?action?==?3
-    fade_out:i32?action?==?3
+    action:vari32 title:str subtitle:str action_bar:str
+    fade_in:i32 stay:i32 fade_out:i32
+    ?action?==?0 title
+    ?action?==?1 subtitle
+    ?action?==?2 action_bar
+    ?action?==?3 fade_in stay fade_out
     -> Title;
 
 sound_effect#49
@@ -374,23 +313,22 @@ entity_teleport#4c
 
 // v ADVANCEMENTS
 advancement_display
-    title:str description:str icon:Slot frame:vari32 flags:i32
-    background_texture:str?flags?&?1
-    x:float y:float
+    title:str description:str icon:Slot frame:vari32
+    flags:i32 background_texture:str x:float y:float
+    ?flags?&?1 background_texture
+    ? x y
     -> AdvancementDisplay;
 
 requirement requirement:vari32+str -> Requirement;
 
 advancement
-    has_parent:bool parent_id:str?has_parent?is?True
-    has_display:bool display:AdvancementDisplay?has_display?is?True
-    criteria:vari32+str
-    requirements:vari32+Requirement
+    parent_id:str? display:AdvancementDisplay?
+    criteria:vari32+str requirements:vari32+Requirement
     -> Advancement;
 
 AdvancementMapping id:str advancement:Advancement -> AdvancementMapping;
 
-criterion id:str achieved:bool date:i64?achieved?is?True -> Criterion;
+criterion id:str achieve_date:i64? -> Criterion;
 progress criteria:vari32+Criterion -> Progress;
 ProgressMapping id:str advancement:Progress -> ProgressMapping;
 

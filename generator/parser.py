@@ -24,17 +24,44 @@ class Definition:
         self.args = args
         self.cls = cls
         self.params = params
+        self.validate_args()
+
+    def validate_args(self):
+        known_args = set()
+        found_conditional = False
+        for arg in self.args:
+            if found_conditional:
+                if isinstance(arg, ArgDefinition):
+                    raise ValueError('Arg definition after conditional '
+                                     '{} in {}'.format(arg, self))
+                elif isinstance(arg, ArgReference):
+                    if arg.name not in known_args:
+                        raise ValueError('Reference to undefined arg '
+                                         '{} in {}'.format(arg, self))
+            else:
+                if isinstance(arg, (Condition, ConditionDisable)):
+                    found_conditional = True
+                elif isinstance(arg, ArgDefinition):
+                    known_args.add(arg.name)
+                else:
+                    raise ValueError('Non-argument definition before '
+                                     'conditional {} in {}'.format(arg, self))
 
     def __str__(self):
-        return '{}#{:x}\n  {} -> {}'.format(
-            self.name, self.id, '\n  '.join(map(str, self.args)), self.cls)
+        result = self.name
+        if self.id is not None:
+            result += '#{:x}'.format(self.id)
+        result += '\n  {} -> {}'.format(
+            '\n  '.join(map(str, self.args)), self.cls)
+
+        return result
 
 class ArgDefinition:
-    def __init__(self, name, cls, vec_count_cls, depends, args):
+    def __init__(self, name, cls, vec_count_cls, optional, args):
         self.name = name
         self.cls = cls
         self.vec_count_cls = vec_count_cls
-        self.depends = depends
+        self.optional = optional
         self.builtin_fmt = TYPE_TO_FMT.get(self.cls)
         self.args = args  # arguments when calling self.cls()
 
@@ -43,40 +70,60 @@ class ArgDefinition:
         if self.vec_count_cls:
             result = '{}+{}'.format(self.vec_count_cls, result)
 
-        if self.depends:
-            result = '{}?{}'.format(result, self.depends)
+        if self.optional:
+            result += '?'
 
         return result
 
-class Dependency:
+
+class Condition:
     def __init__(self, name, op, value):
         self.name = name
         self.op = op
         self.value = value
 
     def __str__(self):
-        return '{}?{}?{}'.format(self.name, self.op, self.value)
+        return '?{}?{}?{}'.format(self.name, self.op, self.value)
+
+class ConditionDisable:
+    def __str__(self):
+        return '?'
+
+class ArgReference:
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return self.name
 
 
 def _parse_arg(string):
+    if string.startswith('?'):
+        if string == '?':
+            return ConditionDisable()
+        return Condition(*string.split('?')[1:])
+
+    if ':' not in string:
+        return ArgReference(string)
+
     name, cls = string.split(':')
     if '+' in cls:
         vec_count_cls, cls = cls.split('+')
     else:
         vec_count_cls = None
 
+    if cls.endswith('?'):
+        optional = True
+        cls = cls[:-1]
+    else:
+        optional = False
+
     if '@' in cls:
         cls, *args = cls.split('@')
     else:
         args = ()
 
-    if '?' in cls:
-        cls, depend_name, depend_op, depend_value = cls.split('?')
-        depends = Dependency(depend_name, depend_op, depend_value)
-    else:
-        depends = None
-
-    return ArgDefinition(name, cls, vec_count_cls, depends, args)
+    return ArgDefinition(name, cls, vec_count_cls, optional, args)
 
 
 def parse_str(string: str):

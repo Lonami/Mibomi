@@ -1,8 +1,7 @@
 teleport_confirm#0 id:vari32 -> TeleportConfirm;
 
 tab_complete#1
-    text:str assume_command:bool has_position:bool
-    looked_at_block:pos?has_position?is?True
+    text:str assume_command:bool looked_at_block:pos?
     -> TabComplete;
 
 chat_message#2 message:str -> ChatMessage;
@@ -31,12 +30,9 @@ plugin_message#9 channel:str data:bytes -> PluginMessage;
 
 // TODO Generated code could validate the flags
 use_entity#a
-    target:vari32
-    type:vari32
-    x:float?type?==?2
-    y:float?type?==?2
-    z:float?type?==?2
-    hand:vari32?type?in?[0,2]
+    target:vari32 type:vari32 x:float y:float z:float hand:vari32
+    ?type?==?2 x y z
+    ?type?in?[0,2] hand
     -> UseEntity;
 
 keep_alive#b id:i64 -> KeepAlive;
@@ -82,16 +78,17 @@ steer_vehicle#16
     -> SteerVehicle;
 
 crafting_book_data#17
-    type:vari32
-    recipe_id:i32?type?==?0
-    crafting_book_open:bool?type?==?1
-    crafting_filter:bool?type?==?1
+    type:vari32 recipe_id:i32 crafting_book_open:bool crafting_filter:bool
+    ?type?==?0 recipe_id
+    ?type?==?1 crafting_book_open crafting_filter
     -> CraftingBookData;
 
 resource_pack_status#18 result:vari32 -> ResourcePackStatus;
 
 advancement_tab#19
-    action:vari32 tab_id:str?action?==?0 -> AdvancementTab;
+    action:vari32 tab_id:str
+    ?action?==?0 tab_id
+    -> AdvancementTab;
 
 held_item_change#1a slot:u16 -> HeldItemChange;
 
