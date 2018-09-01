@@ -48,8 +48,15 @@ class Definition:
                     self.has_optional = True
                     found_conditional = True
                 elif isinstance(arg, ArgDefinition):
+                    if arg.name not in known_args:
+                        known_args[arg.name] = arg
+                    else:
+                        raise ValueError(
+                            'Redefined argument {} with {} in {}'
+                            .format(known_args[arg.name], arg, self)
+                        )
+
                     arg.referenced = False
-                    known_args[arg.name] = arg
                     if arg.optional:
                         self.has_optional = True
                 else:

@@ -2,7 +2,7 @@
 // https://wiki.vg/index.php?title=Protocol&oldid=14204#Clientbound_2
 spawn_object#0
     id:vari32 uuid:uuid type:u8 x:double y:double z:double
-    pitch:u8 yaw:u8 data:i32 vx:i16 y:i16 z:i16 -> SpawnObject;
+    pitch:u8 yaw:u8 data:i32 vx:i16 vy:i16 vz:i16 -> SpawnObject;
 
 spawn_exp_orb#1
     id:vari32 x:double y:double z:double count:i16
@@ -14,7 +14,7 @@ spawn_global_entity#2
 
 spawn_mob#3
     id:vari32 uuid:uuid type:vari32 x:double y:double z:double
-    yaw:u8 pitch:u8 head_pitch:u8 vx:i16 y:i16 z:i16 metadata:entmeta
+    yaw:u8 pitch:u8 head_pitch:u8 vx:i16 vy:i16 vz:i16 metadata:entmeta
     -> SpawnMob;
 
 spawn_painting#4
