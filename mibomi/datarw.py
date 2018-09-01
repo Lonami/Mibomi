@@ -1,13 +1,13 @@
 import io
 import struct
+import uuid
+import warnings
+
+from . import nbt
 
 
 # https://docs.python.org/3/library/struct.html#format-characters
 # noinspection SpellCheckingInspection
-import uuid
-import warnings
-
-
 class DataRW(io.BytesIO):
     """
     Fast Data Read-Writer to serialize and deserialize binary data.
@@ -175,10 +175,10 @@ class DataRW(io.BytesIO):
         warnings.warn('write entity metadata is not implemented')
 
     def readnbt(self):
-        warnings.warn('read nbt is not implemented')
+        return nbt.read(self)
 
     def writenbt(self, value):
-        warnings.warn('writing nbt is not implemented')
+        raise NotImplementedError
 
     def readslot(self):
         warnings.warn('read slot is not implemented')
