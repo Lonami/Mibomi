@@ -2,7 +2,7 @@ from . import parser
 
 
 _BUILTIN_CLS = {
-    'vari32', 'vari64', 'uuid', 'str', 'bytes', 'angle', 'pos',
+    'vari32', 'vari64', 'uuid', 'str', 'bytes', 'pos',
     'entmeta', 'nbt', 'slot'
 }
 

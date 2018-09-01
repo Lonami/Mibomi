@@ -149,18 +149,12 @@ class DataRW(io.BytesIO):
         """
         Writes a position.
         """
-        x, y, z = struct.unpack('III', struct.pack('iii', x, y, z))
+        x, y, z = struct.unpack('III', struct.pack('iii', *xyz))
         self.writefmt('Q', (
             ((x & 0x3ffffff) << 38) |
             ((y & 0xfff)     << 26) |
             ((z & 0x3ffffff) << 0)
         ))
-
-    def readangle(self):
-        return self.read(1)[0]
-
-    def writeangle(self, value):
-        self.write(bytes([value]))
 
     def readuuid(self):
         return uuid.UUID(bytes=self.read(16))

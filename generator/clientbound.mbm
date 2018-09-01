@@ -2,7 +2,7 @@
 // https://wiki.vg/index.php?title=Protocol&oldid=14204#Clientbound_2
 spawn_object#0
     id:vari32 uuid:uuid type:u8 x:double y:double z:double
-    pitch:angle yaw:angle data:i32 vx:i16 y:i16 z:i16 -> SpawnObject;
+    pitch:u8 yaw:u8 data:i32 vx:i16 y:i16 z:i16 -> SpawnObject;
 
 spawn_exp_orb#1
     id:vari32 x:double y:double z:double count:i16
@@ -14,7 +14,7 @@ spawn_global_entity#2
 
 spawn_mob#3
     id:vari32 uuid:uuid type:vari32 x:double y:double z:double
-    yaw:angle pitch:angle head_pitch:angle vx:i16 y:i16 z:i16 metadata:entmeta
+    yaw:u8 pitch:u8 head_pitch:u8 vx:i16 y:i16 z:i16 metadata:entmeta
     -> SpawnMob;
 
 spawn_painting#4
@@ -23,7 +23,7 @@ spawn_painting#4
 
 spawn_player#5
     id:vari32 uuid:uuid x:double y:double z:double
-    yaw:angle pitch:angle metadata:entmeta
+    yaw:u8 pitch:u8 metadata:entmeta
     -> SpawnPlayer;
 
 animation#6 id:vari32 animation:u8 -> Animation;
@@ -156,11 +156,11 @@ entity_relative_move#26
     -> EntityRelativeMove;
 
 entity_look_and_relative_move#27
-    id:vari32 dx:i16 dy:i16 dz:i16 yaw:angle pitch:angle on_ground:bool
+    id:vari32 dx:i16 dy:i16 dz:i16 yaw:u8 pitch:u8 on_ground:bool
     -> EntityLookAndRelativeMove;
 
 entity_look#28
-    id:vari32 yaw:angle pitch:angle on_ground:bool
+    id:vari32 yaw:u8 pitch:u8 on_ground:bool
     -> EntityLook;
 
 vehicle_move#29
@@ -224,7 +224,7 @@ respawn#35
     -> Respawn;
 
 entity_head_look#36
-    id:vari32 head_yaw:angle
+    id:vari32 head_yaw:u8
     -> EntityHeadLook;
 
 select_advancement_tab#37 id:str? -> SelectAdvancementTab;
@@ -308,7 +308,7 @@ collect_item#4b
     -> CollectItem;
 
 entity_teleport#4c
-    id:vari32 x:double y:double z:double yaw:angle pitch:angle on_ground:bool
+    id:vari32 x:double y:double z:double yaw:u8 pitch:u8 on_ground:bool
     -> EntityTeleport;
 
 // v ADVANCEMENTS
