@@ -9,6 +9,7 @@ from . import nbt
 
 Position = collections.namedtuple('Position', ['x', 'y', 'z'])
 Rotation = collections.namedtuple('Rotation', ['x', 'y', 'z'])
+Slot = collections.namedtuple('Slot', ['id', 'count', 'damage', 'nbt'])
 
 
 # https://docs.python.org/3/library/struct.html#format-characters
@@ -222,7 +223,18 @@ class DataRW(io.BytesIO):
         raise NotImplementedError
 
     def readslot(self):
-        warnings.warn('read slot is not implemented')
+        (block_id,) = self.readfmt('h')
+        if block_id == -1:
+            return
+
+        count, dmg = self.readfmt('bh')
+        return Slot(block_id, count, dmg, self.readnbt())
 
     def writeslot(self, value):
-        warnings.warn('writing slot is not implemented')
+        if not value:
+            self.writefmt('h', -1)
+            return
+
+        block_id, count, dmg, nbt = value
+        self.writefmt('hbh', block_id, count, dmg)
+        self.writenbt(value)

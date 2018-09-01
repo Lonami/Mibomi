@@ -79,12 +79,8 @@ open_window#13
     ?type?==?'EntityHorse' entity_id
     -> OpenWindow;
 
-slot
-    block_id:i16 item_count:i8 item_damage:i16 nbt:nbt
-    ?block_id?!=?-1 item_count item_damage nbt
-    -> Slot;
 window_items#14
-    id:u8 slot:i16+Slot
+    id:u8 slot:i16+slot
     -> WindowItems;
 
 window_property#15
@@ -92,7 +88,7 @@ window_property#15
     -> WindowProperty;
 
 set_slot#16
-    window_id:u8 slot:i16 slot_data:Slot
+    window_id:u8 slot:i16 slot_data:slot
     -> SetSlot;
 
 set_cooldown#17 item_id:vari32 ticks:vari32 -> SetCooldown;
@@ -248,7 +244,7 @@ display_scoreboard#3b position:i8 name:str -> DisplayScoreboard;
 entity_metadata#3c id:vari32 metadata:entmeta -> EntityMetadata;
 attach_entity#3d attached_id:i32 holding_id:i32 -> AttachEntity;
 entity_velocity#3e id:vari32 vx:i16 vy:i16 vz:i16 -> EntityVelocity;
-entity_equipment#3f id:vari32 slot:vari32 item:Slot -> EntityEquipment;
+entity_equipment#3f id:vari32 slot:vari32 item:slot -> EntityEquipment;
 
 set_experience#40
     experience_bar:float level:vari32 total_experience:vari32
@@ -313,7 +309,7 @@ entity_teleport#4c
 
 // v ADVANCEMENTS
 advancement_display
-    title:str description:str icon:Slot frame:vari32
+    title:str description:str icon:slot frame:vari32
     flags:i32 background_texture:str x:float y:float
     ?flags?&?1 background_texture
     ? x y
