@@ -34,23 +34,39 @@ def generate_method(gen, definition):
 
 
 def _generate_read_method(gen, definition):
+    if definition.has_optional:
+        for arg in definition.args:
+            if not isinstance(arg, parser.ArgDefinition):
+                break
+            if arg.optional or arg.referenced:
+                gen.write('self.{} = ', arg.name)
+        gen.writeln('None')
+
+    condition = gen.empty().__enter__()
     for group in _collapse_args(definition.args):
-        if isinstance(group, list):
+        if isinstance(group, parser.ConditionDisable):
+            condition.__exit__()
+            condition = gen.empty().__enter__()
+        elif isinstance(group, parser.Condition):
+            condition.__exit__()
+            gen.write('if ')
+            if group.name not in definition.params:
+                gen.write('self.')
+
+            condition = gen.block(
+                '{} {} {}:', group.name, group.op, group.value).__enter__()
+        elif isinstance(group, list):
             fmt = ''
             for arg in group:
                 fmt += arg.builtin_fmt
                 gen.write('self.{}, ', arg.name)
-            gen.write('= data.readfmt({!r})', fmt)
+            gen.writeln('= data.readfmt({!r})', fmt)
         else:
-            dep_block = gen.empty()
-            if group.depends:
-                gen.write('if ')
-                dep = group.depends
-                if dep.name not in definition.params:
-                    gen.write('self.')
+            group: parser.ArgDefinition = group
 
-                dep_block = gen.block('{} {} {}:', dep.name, dep.op, dep.value)
-                dep_block.__enter__()
+            optional = gen.empty().__enter__()
+            if group.optional:
+                optional = gen.block("if data.readfmt('?')[0]:").__enter__()
 
             gen.write('self.{} = ', group.name)
 
@@ -60,8 +76,8 @@ def _generate_read_method(gen, definition):
                     gen.write('data.read(')
                     _generate_read1(gen, group.vec_count_cls)
                     gen.writeln(')')
-                    dep_block.__exit__()
-                    return
+                    optional.__exit__()
+                    continue
                 else:
                     gen.write('[')
 
@@ -72,9 +88,9 @@ def _generate_read_method(gen, definition):
                 _generate_read1(gen, group.vec_count_cls)
                 gen.write(')]')
 
-            dep_block.__exit__()
-
-        gen.writeln()
+            gen.writeln()
+            optional.__exit__()
+    condition.__exit__()
 
 
 def _generate_read1(gen, cls, args=()):
@@ -131,7 +147,20 @@ def _collapse_args(args):
     # comes down to working with more than one value at once.
     collapsed = []
     for arg in args:
-        if arg.builtin_fmt and not (arg.vec_count_cls or arg.depends):
+        # Referenced arguments should be used from their references
+        if isinstance(arg, parser.ArgDefinition) and arg.referenced:
+            continue
+
+        # Treat references as normal arguments since they have a cls
+        if isinstance(arg, parser.ArgReference):
+            arg = arg.ref
+
+        # As long as it's an argument definition with builtin_fmt
+        # and not optional or inside a vector it can be collapsed
+        if (isinstance(arg, parser.ArgDefinition)
+            and arg.builtin_fmt
+            and not arg.optional
+            and not arg.vec_count_cls):
             collapsed.append(arg)
         else:
             if collapsed:

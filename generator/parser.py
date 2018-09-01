@@ -24,10 +24,12 @@ class Definition:
         self.args = args
         self.cls = cls
         self.params = params
+        self.has_optional = False
         self.validate_args()
 
     def validate_args(self):
-        known_args = set()
+        known_args = {}
+        self.has_optional = False
         found_conditional = False
         for arg in self.args:
             if found_conditional:
@@ -35,14 +37,21 @@ class Definition:
                     raise ValueError('Arg definition after conditional '
                                      '{} in {}'.format(arg, self))
                 elif isinstance(arg, ArgReference):
-                    if arg.name not in known_args:
+                    if arg.name in known_args:
+                        arg.ref = known_args[arg.name]
+                        arg.ref.referenced = True
+                    else:
                         raise ValueError('Reference to undefined arg '
                                          '{} in {}'.format(arg, self))
             else:
                 if isinstance(arg, (Condition, ConditionDisable)):
+                    self.has_optional = True
                     found_conditional = True
                 elif isinstance(arg, ArgDefinition):
-                    known_args.add(arg.name)
+                    arg.referenced = False
+                    known_args[arg.name] = arg
+                    if arg.optional:
+                        self.has_optional = True
                 else:
                     raise ValueError('Non-argument definition before '
                                      'conditional {} in {}'.format(arg, self))
@@ -64,6 +73,7 @@ class ArgDefinition:
         self.optional = optional
         self.builtin_fmt = TYPE_TO_FMT.get(self.cls)
         self.args = args  # arguments when calling self.cls()
+        self.referenced = False
 
     def __str__(self):
         result = '{}:{}'.format(self.name, self.cls)
@@ -92,6 +102,7 @@ class ConditionDisable:
 class ArgReference:
     def __init__(self, name):
         self.name = name
+        self.ref = None
 
     def __str__(self):
         return self.name
