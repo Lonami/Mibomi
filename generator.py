@@ -24,4 +24,4 @@ if __name__ == '__main__':
         gen.writeln('from . import connection, datarw')
         with gen.block('class Requester(connection.Connection):'):
             for definition in generator.parser.parse_str(fin.read()):
-                pass  # generator.generator.generate_method(gen, definition)
+                generator.generator.generate_method(gen, definition)

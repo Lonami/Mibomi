@@ -27,7 +27,16 @@ def generate_method(gen, definition):
     if definition.params:
         raise NotImplementedError
 
-    with gen.ameth(definition.name, *(x.name for x in definition.args)):
+    args = []
+    for arg in definition.args:
+        if not isinstance(arg, parser.ArgDefinition):
+            break
+        else:
+            args.append(arg.name)
+            if arg.optional or arg.referenced:
+                args[-1] += '=None'
+
+    with gen.ameth(definition.name, *args):
         gen.writeln('_ = datarw.DataRW()')
         _generate_write_method(gen, definition)
         gen.writeln('await self.send(0x{:x}, _.getvalue())', definition.id)
@@ -63,7 +72,6 @@ def _generate_read_method(gen, definition):
             gen.writeln('= data.readfmt({!r})', fmt)
         else:
             group: parser.ArgDefinition = group
-
             optional = gen.empty().__enter__()
             if group.optional:
                 optional = gen.block("if data.readfmt('?')[0]:").__enter__()
@@ -104,32 +112,40 @@ def _generate_read1(gen, cls, args=()):
             gen.write(', self.{}', arg)
         gen.write(')')
 
+
 def _generate_write_method(gen, definition):
+    condition = gen.empty().__enter__()
     for group in _collapse_args(definition.args):
-        if isinstance(group, list):
+        if isinstance(group, parser.ConditionDisable):
+            condition.__exit__()
+            condition = gen.empty().__enter__()
+        elif isinstance(group, parser.Condition):
+            condition.__exit__()
+            gen.write('if ')
+            condition = gen.block(
+                '{} {} {}:', group.name, group.op, group.value).__enter__()
+        elif isinstance(group, list):
             gen.writeln('_.writefmt({!r}, {})',
                         ''.join(x.builtin_fmt for x in group),
                         ','.join(x.name for x in group))
         else:
-            dep_block = gen.empty()
-            if group.depends:
-                gen.write('if ')
-                dep = group.depends
-                dep_block = gen.block('{} {} {}:', dep.name, dep.op, dep.value)
-                dep_block.__enter__()
-
+            group: parser.ArgDefinition = group
             name = group.name
-            vec_block = gen.empty()
+            optional = gen.empty().__enter__()
+            if group.optional:
+                with gen.block('if {} is None:', name):
+                    gen.writeln("_.writefmt('?', False)")
+                optional = gen.block('else:').__enter__()
+                gen.writeln("_.writefmt('?', True)")
+
+            vector = gen.empty().__enter__()
             if group.vec_count_cls:
                 if group.vec_count_cls not in _BUILTIN_CLS:
                     raise NotImplementedError
 
-                gen.writeln(
-                    '_.write{}(len({}))', group.vec_count_cls, group.name)
-
+                gen.writeln('_.write{}(len({}))', group.vec_count_cls, name)
+                vector = gen.block('for _x in {}:', group.name).__enter__()
                 name = '_x'
-                vec_block = gen.block('for _x in {}:', group.name)
-                vec_block.__enter__()
 
             if group.builtin_fmt:
                 gen.writeln('_.writefmt({!r}, {})', group.builtin_fmt, name)
@@ -138,8 +154,10 @@ def _generate_write_method(gen, definition):
             else:
                 raise NotImplementedError
 
-            vec_block.__exit__()
-            dep_block.__exit__()
+            vector.__exit__()
+            optional.__exit__()
+    condition.__exit__()
+
 
 def _collapse_args(args):
     # Try collapsing bare types into a single fmt call.
@@ -160,7 +178,7 @@ def _collapse_args(args):
         if (isinstance(arg, parser.ArgDefinition)
             and arg.builtin_fmt
             and not arg.optional
-            and not arg.vec_count_cls):
+                and not arg.vec_count_cls):
             collapsed.append(arg)
         else:
             if collapsed:
