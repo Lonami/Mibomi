@@ -21,9 +21,9 @@ class Definition:
     def __init__(self, name, id, args, cls, params):
         self.name = name
         self.id = id
-        self.args = args
+        self.args = tuple(args)
         self.cls = cls
-        self.params = params
+        self.params = tuple(params)
         self.has_optional = False
         self.validate_args()
 
@@ -72,6 +72,7 @@ class Definition:
 
         return result
 
+
 class ArgDefinition:
     def __init__(self, name, cls, vec_count_cls, optional, args):
         self.name = name
@@ -79,7 +80,7 @@ class ArgDefinition:
         self.vec_count_cls = vec_count_cls
         self.optional = optional
         self.builtin_fmt = TYPE_TO_FMT.get(self.cls)
-        self.args = args  # arguments when calling self.cls()
+        self.args = tuple(args)  # arguments when calling self.cls()
         self.referenced = False
 
     def __str__(self):
@@ -102,9 +103,11 @@ class Condition:
     def __str__(self):
         return '?{}?{}?{}'.format(self.name, self.op, self.value)
 
+
 class ConditionDisable:
     def __str__(self):
         return '?'
+
 
 class ArgReference:
     def __init__(self, name):
