@@ -158,6 +158,7 @@ class Client(requester.Requester):
         self._disconnect_timer.reset()
         _log.debug('Responding to keep-alive')
         await self.keep_alive(keep_alive.id)
+        await self.player(on_ground=True)  # Send periodically or get kicked
 
     async def on_player_abilities(self, player_ab: types.PlayerAbilities):
         # https://wiki.vg/Protocol_FAQ#What.27s_the_normal_login_sequence
