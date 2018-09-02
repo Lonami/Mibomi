@@ -1,7 +1,7 @@
 import re
-import sys
 
 
+# MBM types that can be directly translated to struct fmt types
 TYPE_TO_FMT = {
     'i8': 'b',
     'u8': 'B',
@@ -18,6 +18,9 @@ TYPE_TO_FMT = {
 
 
 class Definition:
+    """
+    The entire definition for a line in a MBM file.
+    """
     def __init__(self, name, id, args, cls, params):
         self.name = name
         self.id = id
@@ -74,6 +77,9 @@ class Definition:
 
 
 class ArgDefinition:
+    """
+    The definition for a single argument.
+    """
     def __init__(self, name, cls, vec_count_cls, optional, args):
         self.name = name
         self.cls = cls
@@ -95,6 +101,9 @@ class ArgDefinition:
 
 
 class Condition:
+    """
+    A non-empty condition present in a definition's list of arguments.
+    """
     def __init__(self, name, op, value):
         self.name = name
         self.op = op
@@ -105,11 +114,17 @@ class Condition:
 
 
 class ConditionDisable:
+    """
+    An empty condition present in a definition's list of arguments.
+    """
     def __str__(self):
         return '?'
 
 
 class ArgReference:
+    """
+    A reference to a previously defined argument.
+    """
     def __init__(self, name):
         self.name = name
         self.ref = None
@@ -119,6 +134,9 @@ class ArgReference:
 
 
 def _parse_arg(string):
+    """
+    Parses the argument present in the current string.
+    """
     if string.startswith('?'):
         if string == '?':
             return ConditionDisable()
@@ -148,13 +166,15 @@ def _parse_arg(string):
 
 
 def parse_str(string: str):
+    """
+    Parses an entire string containing zero or more MBM definitions,
+    and yields the built objects. Invalid definitions will raise.
+    """
     string = re.sub(r'//[^\n]*', '', string)
     defs = [x.strip() for x in string.split(';') if x and not x.isspace()]
     for definition in defs:
         if definition.count('->') != 1:
-            print('Wrong amount of ->:', file=sys.stderr)
-            print(definition, file=sys.stderr)
-            continue
+            raise ValueError('Wrong amount of -> for {}'.format(definition))
 
         left, cls = definition.split('->')
         left, *args = left.split()

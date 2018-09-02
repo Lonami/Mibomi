@@ -1,13 +1,21 @@
-from . import parser
+from . import pygen, parser
 
 
+# These types are assumed to be available in the data-reader-writer.
+# as f'read{type}' and f'write{type}'.
 _BUILTIN_CLS = {
     'vari32', 'vari64', 'uuid', 'str', 'bytes', 'pos',
     'entmeta', 'nbt', 'slot'
 }
 
 
-def generate_class(gen, definition):
+def generate_class(gen: pygen.PyGen, definition: parser.Definition):
+    """
+    Generates a Python class for the given parser definition.
+
+    It will have a single input parameter, ``data``, that should
+    be a class able to ease reading data from a byte stream.
+    """
     with gen.block('class {}(ServerType):', definition.cls):
         if definition.id is not None:
             gen.writeln('ID = 0x{:x}', definition.id)
@@ -23,18 +31,27 @@ def generate_class(gen, definition):
         gen.writeln('TYPES[0x{:x}] = {}', definition.id, definition.cls)
 
 
-def generate_method(gen, definition):
+def generate_method(gen: pygen.PyGen, definition: parser.Definition):
+    """
+    Generates a Python method for the given parser definition.
+
+    The method will have a ``self`` parameter and N extra parameters
+    (some may be optional), to accommodate those of the definition.
+
+    The method will create a data-read-writer to serialize its
+    payload before finally sending it over the wire.
+    """
     if definition.params:
         raise NotImplementedError
 
     args = []
     for arg in definition.args:
         if not isinstance(arg, parser.ArgDefinition):
-            break
+            break  # Break as soon as we find a conditional or reference
         else:
             args.append(arg.name)
             if arg.optional or arg.referenced:
-                args[-1] += '=None'
+                args[-1] += '=None'  # Optional/referenced args may be omitted
 
     with gen.ameth(definition.name, *args):
         gen.writeln('_ = datarw.DataRW()')
@@ -43,7 +60,11 @@ def generate_method(gen, definition):
 
 
 def _generate_read_method(gen, definition):
+    """
+    This is the part where the class actually reads its arguments.
+    """
     if definition.has_optional:
+        # Set to `= None` all those optional arguments
         for arg in definition.args:
             if not isinstance(arg, parser.ArgDefinition):
                 break
@@ -102,6 +123,9 @@ def _generate_read_method(gen, definition):
 
 
 def _generate_read1(gen, cls, args=()):
+    """
+    Helper to read one and only one item for the desired class.
+    """
     if cls in parser.TYPE_TO_FMT:
         gen.write('data.readfmt({!r})[0]', parser.TYPE_TO_FMT[cls])
     elif cls in _BUILTIN_CLS:
@@ -114,6 +138,9 @@ def _generate_read1(gen, cls, args=()):
 
 
 def _generate_write_method(gen, definition):
+    """
+    This is the part where the class actually writes its parameters.
+    """
     condition = gen.empty().__enter__()
     for group in _collapse_args(definition.args):
         if isinstance(group, parser.ConditionDisable):
@@ -160,9 +187,13 @@ def _generate_write_method(gen, definition):
 
 
 def _collapse_args(args):
-    # Try collapsing bare types into a single fmt call.
-    # The builtin struct module is really good when it
-    # comes down to working with more than one value at once.
+    """
+    This method collapses raw (or bare) types into a single fmt call.
+
+    The builtin struct module is really good when it comes down to
+    working with more than one value at once, so this optimization
+    is worth doing.
+    """
     collapsed = []
     for arg in args:
         # Referenced arguments should be used from their references
