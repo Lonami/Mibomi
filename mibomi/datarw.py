@@ -220,7 +220,7 @@ class DataRW(io.BytesIO):
         return nbt.read(self)
 
     def writenbt(self, value):
-        raise NotImplementedError
+        value.write(self)
 
     def readslot(self):
         (block_id,) = self.readfmt('h')

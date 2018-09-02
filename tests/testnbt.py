@@ -21,17 +21,19 @@ from mibomi.nbt import (
 class TestNBT(unittest.TestCase):
     def test_short(self):
         target = TagShort('shortTest', 32767)
-        got = mibomi.nbt.read(bytearray.fromhex('''
+        data = bytearray.fromhex('''
         02
         00 09
         73 68 6F 72 74 54 65 73 74
         7F FF
-        '''))
+        ''')
+        got = mibomi.nbt.read(data)
         self.assertEqual(got, target)
+        self.assertEqual(mibomi.nbt.write(got), data)
 
     def test_normal(self):
         target = TagCompound('hello world', [TagString('name', 'Bananrama')])
-        got = mibomi.nbt.read(bytearray.fromhex('''
+        data = bytearray.fromhex('''
         0a
         00 0b
         68 65 6c 6c 6f 20 77 6f 72 6c 64
@@ -41,8 +43,10 @@ class TestNBT(unittest.TestCase):
         00 09
         42 61 6e 61 6e 72 61 6d 61
         00
-        '''))
+        ''')
+        got = mibomi.nbt.read(data)
         self.assertEqual(got, target)
+        self.assertEqual(mibomi.nbt.write(got), data)
 
     def test_big(self):
         def f(n):
@@ -87,7 +91,7 @@ class TestNBT(unittest.TestCase):
                          '62, 34, 16, 8, ...))', bytes(map(f, range(1000)))),
             TagDouble('doubleTest', 0.4931287132182315)
         ])
-        got = mibomi.nbt.read(gzip.decompress(base64.b64decode('''
+        data = gzip.decompress(base64.b64decode('''
 H4sIAAAAAAAAAO1Uz08aQRR+wgLLloKxxBBjzKu1hKXbzUIRibGIFiyaDRrYqDGGuCvDgi67Znew
 8dRLe2x66z/TI39Dz732v6DDL3tpz73wMsn35r1v5ntvJnkCBFRyTywOeMuxTY149ONwYj4Iex3H
 pZMYD4JH3e6EAmK1oqrHeHZcV8uoVQ8byNYeapWGhg2tflh7j4PPg0+Db88DEG5bjj6+pThMZP0Q
@@ -97,8 +101,10 @@ P68dG2AhWd/68QX+wc78nb0AvPFAyfiFQkBG/p7r6g+TOmiHYLvrMjejKAqOu/XQaWPKTtvp7Obm
 Kzu9Jb5kSQk9qruU/Rh+6NIO2m8VTLFoPivhm5yEmbyEBQllWRZFAP8vKK4v8sKypC4dIHdaO7mM
 yucp31FByRa1xW2hKq0sxTF/unqSjl6dX/gSBSMb0fa3d6rNlXK8nt9YXUuXrpIXuUTQgMj6Pr+z
 3FTLB3Vuo7Z2WZKTqdxRUJlrzDXmGv9XIwhCy+kb1njC7P78evt9eNOE39TypPsIBgAA
-        ''')))
+        '''))
+        got = mibomi.nbt.read(data)
         self.assertEqual(got, target)
+        self.assertEqual(mibomi.nbt.write(got), data)
 
 
 if __name__ == '__main__':
