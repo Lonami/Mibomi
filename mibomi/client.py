@@ -207,6 +207,17 @@ class Client(requester.Requester):
     async def on_chunk_data(self, data: types.ChunkData):
         self._world.feed_chunk(chunk.Chunk(data))
 
+    async def on_block_change(self, data: types.BlockChange):
+        x, y, z = data.location
+        self._world[x, y, z] = chunk.get_block_id(data.id)
+
+    async def on_multi_block_change(self, data: types.MultiBlockChange):
+        c = self._world.get_chunk(data.chunk_x, data.chunk_z)
+        for record in data.records:
+            x = record.h_pos >> 4
+            z = record.h_pos & 0xf
+            c[x, record.y, z] = chunk.get_block_id(record.block_id)
+
     async def request(self):
         """
         Sends a (ping, empty) request to the server.

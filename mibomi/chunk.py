@@ -5,6 +5,11 @@ SECTION_HEIGHT = 16
 from . import datarw
 
 
+def get_block_id(n):
+    # n & 0x0f  # metadata
+    return n >> 4  # block_id
+
+
 class IndirectPalette:
     def __init__(self, bits_per_block):
         self.bits_per_block = bits_per_block
@@ -13,7 +18,7 @@ class IndirectPalette:
     def read(self, data):
         # NOTE: This changes in 1.13
         # The 4 low bits represent metadata, and the rest is the block ID.
-        self.state_ids = [data.readvari32() >> 4
+        self.state_ids = [get_block_id(data.readvari32())
                           for _ in range(data.readvari32())]
 
     def __getitem__(self, item):
@@ -57,6 +62,22 @@ class Chunk:
             self.biome_info = None
 
         assert not data.read()
+
+    def __getitem__(self, xyz):
+        x, y, z = xyz
+        yh, yl = divmod(y, 16)
+        if self.sections[yh]:
+            return self.sections[yh][x, yl, z]
+        else:
+            return 0
+
+    def __setitem__(self, xyz, value):
+        x, y, z = xyz
+        yh, yl = divmod(y, 16)
+        if self.sections[yh]:
+            self.sections[yh][x, yl, z] = value
+        else:
+            raise NotImplementedError
 
 
 class Section:
@@ -106,6 +127,10 @@ class Section:
     def __getitem__(self, xyz):
         x, y, z = xyz
         return self._blocks[(y * SECTION_HEIGHT + z) * SECTION_WIDTH + x]
+
+    def __setitem__(self, xyz, value):
+        x, y, z = xyz
+        self._blocks[(y * SECTION_HEIGHT + z) * SECTION_WIDTH + x] = value
 
 
 class LightData:
