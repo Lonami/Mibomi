@@ -56,24 +56,47 @@ class Chunk:
         else:
             self.biome_info = None
 
+        assert not data.read()
+
 
 class Section:
     def __init__(self, data, over_world):
         self._bits_per_block = data.read(1)[0]
         self._palette = get_palette(self._bits_per_block)
         self._palette.read(data)
-        # N longs in big-endian follow. Due to the endianness,
-        # we can also read (N * 8) bytes to have a single array
-        # of bytes and access its bits directly as required.
-        #
-        # This is a lot more space friendly, and since we don't
-        # need to render the blocks, we don't care about some
-        # extra processing needed to extract the actual blocks.
-        length = data.readvari32() * 8
-        self._data = data.read(length)
-        assert len(self._data) == length
-        # Cache the bits per block masking not to redo this on get item
-        self._mask = (1 << self._bits_per_block) - 1
+
+        block_ids = []
+        length = data.readvari32()
+        section_size = SECTION_HEIGHT * SECTION_WIDTH * SECTION_WIDTH
+        assert (length * 64) // self._bits_per_block >= section_size
+
+        # Note that the bits are read from *low to high* in chunks
+        # of *long values*. For this reason we have an integer with
+        # an amount of bits, and every time we need more bits, read
+        # another long worth of bits.
+        bits = 0  # How many bits do we have available...
+        integer = 0  # ...in this integer?
+        mask = (1 << self._bits_per_block) - 1
+        for _ in range(section_size):
+            if bits < self._bits_per_block:
+                # It's VERY important that we read UNSIGNED.
+                #
+                # We want to work with the BITS and shift BITS alone;
+                # shifting negative integers in Python, where the numbers
+                # have no bounded size, produces strange results; this
+                # took a few hours to debug and obviously fails "randomly".
+                integer |= data.readfmt('Q')[0] << bits
+                bits += 64
+                length -= 1
+
+            block_ids.append(self._palette[integer & mask])
+            integer >>= self._bits_per_block
+            bits -= self._bits_per_block
+
+        # Assert that we have read exactly all the longs we needed
+        assert length == 0
+
+        self._blocks = block_ids
         self.light = LightData(data)
         if over_world:
             self.sky_light = LightData(data)
@@ -82,17 +105,7 @@ class Section:
 
     def __getitem__(self, xyz):
         x, y, z = xyz
-        # TODO Slicing bits like this is not tested well enough
-        index = (y * SECTION_HEIGHT + z) * SECTION_WIDTH + x
-        bit_index = self._bits_per_block * index
-        start = bit_index >> 3
-        end = (bit_index + self._bits_per_block - 1) >> 3
-        result = int.from_bytes(self._data[start:end + 1], 'big')
-        shift = (bit_index + self._bits_per_block) & 7
-        if shift:
-            shift = 8 - shift
-        data = (result >> shift) & self._mask
-        return self._palette[data]
+        return self._blocks[(y * SECTION_HEIGHT + z) * SECTION_WIDTH + x]
 
 
 class LightData:
