@@ -110,7 +110,7 @@ explosion#1c x:float y:float z:float radius:float
     vx:float vy:float vz:float
     -> Explosion;
 
-unload_chunk#1d x:i16 z:i16 -> UnloadChunk;
+unload_chunk#1d x:i32 z:i32 -> UnloadChunk;
 
 change_game_state#1e reason:u8 value:float -> ChangeGameState;
 
