@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import math
 
 
 from cryptography.hazmat.backends import default_backend
@@ -8,7 +9,9 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 
-from . import requester, types, enums, datarw, authenticator, timer
+from . import (
+    requester, types, enums, datarw, authenticator, timer, world, chunk
+)
 
 PROTOCOL_V1_12_2 = 340
 
@@ -18,6 +21,7 @@ _log = logging.getLogger(__name__)
 class Client(requester.Requester):
     def __init__(self, ip, port=25565, *, loop=None):
         super().__init__(ip, port, loop=loop)
+        self._world = world.World()
         self._position = None
         self._id_to_handler = {
             pid: getattr(self, 'on_' + cls.NAME)
@@ -183,7 +187,12 @@ class Client(requester.Requester):
             pos.x, pos.y, pos.z, pos.yaw, pos.pitch, on_ground=True)
 
         await self.client_status(action_id=0)
-        self._position = pos.x, pos.y, pos.z
+        # int() rounds towards zero, math.floor works for negative numbers
+        x = math.floor(pos.x)
+        y = math.floor(pos.y) - 1
+        z = math.floor(pos.z)
+        _log.debug('The block below us (%d, %d, %d) is %d',
+                   x, y, z, self._world[x, y, z])
 
     async def on_disconnect(self, obj):
         _log.debug('Server disconnected us')
@@ -194,6 +203,9 @@ class Client(requester.Requester):
         """Callback to handle a generic Packet ID."""
         if not isinstance(obj, (types.TimeUpdate, types.ChunkData)):
             _log.debug('Received %s: %s', obj.NAME, obj)
+
+    async def on_chunk_data(self, data: types.ChunkData):
+        self._world.feed_chunk(chunk.Chunk(data))
 
     async def request(self):
         """

@@ -1,7 +1,6 @@
 import io
 import struct
 import uuid
-import warnings
 import collections
 
 from . import nbt
