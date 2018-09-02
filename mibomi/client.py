@@ -14,6 +14,7 @@ PROTOCOL_V1_12_2 = 340
 
 _log = logging.getLogger(__name__)
 
+
 class Client(requester.Requester):
     def __init__(self, ip, port=25565, *, loop=None):
         super().__init__(ip, port, loop=loop)
@@ -126,6 +127,9 @@ class Client(requester.Requester):
                 try:
                     if pid in types.TYPES:
                         await self._id_to_handler[pid](types.TYPES[pid](data))
+                        left = data.read()
+                        if left:
+                            _log.warning('Missing data after %d %s', pid, left)
                     else:
                         await self.on_unknown(pid, data)
                 except Exception as e:
