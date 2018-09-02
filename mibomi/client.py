@@ -152,7 +152,16 @@ class Client(requester.Requester):
         x += dx * scale
         z += dz * scale
         self._position = x, y, z
-        await self.player_position(x, y, z, on_ground=True)
+
+        yaw = -math.atan2(dx, dz) / math.pi * 180
+        if yaw < 0:
+            yaw = 360 + yaw
+
+        # r = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
+        # pitch = -math.asin(dy / r) / math.pi * 180
+        pitch = 0
+        await self.player_position_and_look(
+            x, y, z, yaw, pitch, on_ground=True)
 
     async def on_unknown(self, pid, data):
         _log.debug('Unknown packet %x', pid)
@@ -187,6 +196,7 @@ class Client(requester.Requester):
             pos.x, pos.y, pos.z, pos.yaw, pos.pitch, on_ground=True)
 
         await self.client_status(action_id=0)
+        self._position = pos.x, pos.y, pos.z
         # int() rounds towards zero, math.floor works for negative numbers
         x = math.floor(pos.x)
         y = math.floor(pos.y) - 1
