@@ -8,10 +8,11 @@ import json
 import os
 import pprint
 
-import mibomi.akbhit
-import mibomi.authenticator
-import mibomi.client
-import mibomi.enums
+
+from mibomi import Client
+from mibomi.datatypes import enums
+from mibomi.mojang import authenticator
+from mibomi.utils import akbhit
 
 AUTH_DATA = 'auth.data'
 
@@ -23,7 +24,7 @@ async def main():
             client_token = file.readline().rstrip()
             profile_id = file.readline().rstrip()
     else:
-        response = await mibomi.authenticator.authenticate(
+        response = await authenticator.authenticate(
             input('Enter Mojang username (or email): '),
             getpass.getpass('Enter account password: ')
         )
@@ -38,8 +39,8 @@ async def main():
             )))
 
     print('The client token is', client_token)
-    async with mibomi.client.Client('localhost') as client:
-        await client.handshake(mibomi.enums.HandshakeState.STATUS)
+    async with Client('localhost') as client:
+        await client.handshake(enums.HandshakeState.STATUS)
         await client.request()
 
         packet_id, data = await client.recv()
@@ -53,8 +54,8 @@ async def main():
         pprint.pprint(json.loads(data.readstr()))
 
     loop = asyncio.get_event_loop()
-    async with mibomi.client.Client('localhost') as client,\
-            mibomi.akbhit.KBHit(loop) as kb:
+    async with Client('localhost') as client,\
+            akbhit.KBHit(loop) as kb:
         async def handle_key(key):
             key = key.lower()
             if key == 'w':
@@ -88,7 +89,7 @@ async def main():
         # username = input('Enter player name: ')
         username = 'Mibomi'
         print('Logging in...', end='', flush=True)
-        await client.handshake(mibomi.enums.HandshakeState.LOGIN)
+        await client.handshake(enums.HandshakeState.LOGIN)
         await client.login(username, access_token, profile_id)
         print(' Done.')
         print('Running client...', end='', flush=True)

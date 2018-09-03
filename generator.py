@@ -51,9 +51,8 @@ if __name__ == '__main__':
         gen.writeln('from . import connection')
         gen.writeln('from ..datatypes import DataRW')
         gen.writeln('import typing')
-        with gen.block('if typing.TYPE_CHECKING:'):
-            gen.writeln('from uuid import UUID')
-            gen.writeln('from ..datatypes import Position, Slot, DataRW')
+        gen.writeln('from uuid import UUID')
+        gen.writeln('from ..datatypes import Position, Slot, DataRW')
 
         with gen.block('class Requester(connection.Connection):'):
             for definition in generator.parser.parse_str(fin.read()):
