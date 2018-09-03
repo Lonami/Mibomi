@@ -1,16 +1,18 @@
+"""
+This module contains basic definitions that
+allow defining and deserialize entire chunk data.
+"""
+from . import datarw
+
 CHUNK_HEIGHT = 256
 SECTION_WIDTH = 16
 SECTION_HEIGHT = 16
 
-from . import datarw
 
-
-def get_block_id(n):
-    # n & 0x0f  # metadata
-    return n >> 4  # block_id
-
-
-class IndirectPalette:
+class _IndirectPalette:
+    """
+    Indirect block palette, which needs a mapping block -> real ID.
+    """
     def __init__(self, bits_per_block):
         self.bits_per_block = bits_per_block
         self.state_ids = []
@@ -18,14 +20,17 @@ class IndirectPalette:
     def read(self, data):
         # NOTE: This changes in 1.13
         # The 4 low bits represent metadata, and the rest is the block ID.
-        self.state_ids = [get_block_id(data.readvari32())
+        self.state_ids = [Chunk.get_block_id(data.readvari32())
                           for _ in range(data.readvari32())]
 
     def __getitem__(self, item):
         return self.state_ids[item]
 
 
-class DirectPalette:
+class _DirectPalette:
+    """
+    Direct block palette, where sending an indirect palette would be costly.
+    """
     def read(self, data):
         data.readvari32()  # stub
 
@@ -33,21 +38,33 @@ class DirectPalette:
         return item
 
 
-def get_palette(bits_per_block):
-    if bits_per_block <= 4:
-        return IndirectPalette(4)
-    elif bits_per_block <= 8:
-        return IndirectPalette(bits_per_block)
+def _get_palette(bits_per_block):
+    """
+    Retrieve the appropriated block palette based on the bits per block.
+    """
+    if bits_per_block > 8:
+        return _DirectPalette()
     else:
-        return DirectPalette()
+        return _IndirectPalette(max(bits_per_block, 4))
 
 
 class Chunk:
+    """
+    This class represents an entire chunk, with dimensions
+    `BLOCK_WIDTH` x `BLOCK_HEIGHT` x `BLOCK_WIDTH`.
+
+    Access should be dictionary-like through tuples,
+    such as ``chunk[7, 64, 12]`` to retrieve the block
+    at the position ``(7, 64, 129)``.
+
+    In addition, it has its `x` and `y` positions, the
+    `entities` in the chunk, all its `sections` and
+    `biome_info`.
+    """
     def __init__(self, chunk, over_world=True):
         data = datarw.DataRW(chunk.data)
         self.x = chunk.x
         self.z = chunk.z
-        self.bit_mask = chunk.bit_mask
         self.entities = chunk.block_entities
         self.sections = []
         for section_y in range(CHUNK_HEIGHT // SECTION_HEIGHT):
@@ -62,6 +79,14 @@ class Chunk:
             self.biome_info = None
 
         assert not data.read()
+
+    @staticmethod
+    def get_block_id(n):
+        """
+        Returns the block ID for the given compound ID.
+        """
+        # n & 0x0f  # metadata
+        return n >> 4  # block_id
 
     def __getitem__(self, xyz):
         x, y, z = xyz
@@ -81,9 +106,16 @@ class Chunk:
 
 
 class Section:
+    """
+    Represents a single section of a chunk. Its intended
+    usage is access similar to how the chunk data is
+    accessed.
+
+    Sections have `light` and `sky_light` data.
+    """
     def __init__(self, data, over_world):
         self._bits_per_block = data.read(1)[0]
-        self._palette = get_palette(self._bits_per_block)
+        self._palette = _get_palette(self._bits_per_block)
         self._palette.read(data)
 
         block_ids = []
@@ -134,6 +166,9 @@ class Section:
 
 
 class LightData:
+    """
+    Light data for a section.
+    """
     def __init__(self, data):
         length = SECTION_HEIGHT * SECTION_WIDTH * SECTION_WIDTH // 2
         self._data = bytearray(data.read(length))
@@ -161,6 +196,9 @@ class LightData:
 
 
 class BiomeInfo:
+    """
+    Biome information for a chunk.
+    """
     def __init__(self, data):
         length = SECTION_WIDTH * SECTION_WIDTH
         self._data = bytearray(data.read(length))

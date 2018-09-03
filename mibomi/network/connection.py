@@ -2,7 +2,7 @@ import asyncio
 import socket
 import zlib
 
-from . import datarw
+from ..datatypes import DataRW
 
 
 class Connection:
@@ -39,7 +39,7 @@ class Connection:
         Sends a packet with the given Packet ID and payload binary data.
         """
         # For both modes, the data length that counts is Packet ID and Data
-        data = datarw.DataRW.packvari(pid) + data
+        data = DataRW.packvari(pid) + data
         if self._compression is not None:
             # If compression is enabled, compress unless below threshold, in
             # which case the inner data length should be 0 (not compressed).
@@ -49,9 +49,9 @@ class Connection:
                 data_length = len(data)
                 data = zlib.compress(data)
 
-            data = datarw.DataRW.packvari(data_length) + data
+            data = DataRW.packvari(data_length) + data
 
-        data = datarw.DataRW.packvari(len(data)) + data
+        data = DataRW.packvari(len(data)) + data
         await self._loop.sock_sendall(self.sock, data)
 
     async def recv(self):
@@ -59,8 +59,8 @@ class Connection:
         Receives a packet from the network, returning ``(Packet ID, DataRW)``.
         """
         async with self._rlock:
-            length = await datarw.DataRW.aunpackvari(self._recv1)
-            data = datarw.DataRW(await self.read(length))
+            length = await DataRW.aunpackvari(self._recv1)
+            data = DataRW(await self.read(length))
 
         if self._compression is not None:
             data_length = data.readvari32()
@@ -68,7 +68,7 @@ class Connection:
                 assert data_length >= self._compression
                 data = zlib.decompress(data.read())
                 assert len(data) == data_length
-                data = datarw.DataRW(data)
+                data = DataRW(data)
 
         return data.readvari32(), data
 

@@ -54,7 +54,7 @@ def generate_method(gen: pygen.PyGen, definition: parser.Definition):
                 args[-1] += '=None'  # Optional/referenced args may be omitted
 
     with gen.ameth(definition.name, *args):
-        gen.writeln('_ = datarw.DataRW()')
+        gen.writeln('_ = DataRW()')
         _generate_write_method(gen, definition)
         gen.writeln('await self.send(0x{:x}, _.getvalue())', definition.id)
 

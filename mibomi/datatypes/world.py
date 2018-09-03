@@ -2,6 +2,10 @@ import collections
 
 
 class World:
+    """
+    Represents an entire world. Access should be dictionary-like
+    through (x, y, z) tuples, such as ``world[149, 64, -13]``.
+    """
     def __init__(self):
         self._chunks = collections.defaultdict(list)
 
@@ -29,4 +33,7 @@ class World:
             raise NotImplementedError
 
     def get_chunk(self, x, z):
+        """
+        Returns the chunk at the given position, if known.
+        """
         return self._chunks[x, z]

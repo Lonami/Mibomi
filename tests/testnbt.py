@@ -1,8 +1,8 @@
 import base64
 import gzip
 import unittest
-import mibomi.nbt
-from mibomi.nbt import (
+from mibomi.datatypes import nbt
+from mibomi.datatypes.nbt import (
     TagByte,
     TagShort,
     TagInt,
@@ -12,9 +12,7 @@ from mibomi.nbt import (
     TagByteArray,
     TagString,
     TagList,
-    TagCompound,
-    TagIntArray,
-    TagLongArray
+    TagCompound
 )
 
 
@@ -27,9 +25,9 @@ class TestNBT(unittest.TestCase):
         73 68 6F 72 74 54 65 73 74
         7F FF
         ''')
-        got = mibomi.nbt.read(data)
+        got = nbt.read(data)
         self.assertEqual(got, target)
-        self.assertEqual(mibomi.nbt.write(got), data)
+        self.assertEqual(nbt.write(got), data)
 
     def test_normal(self):
         target = TagCompound('hello world', [TagString('name', 'Bananrama')])
@@ -44,9 +42,9 @@ class TestNBT(unittest.TestCase):
         42 61 6e 61 6e 72 61 6d 61
         00
         ''')
-        got = mibomi.nbt.read(data)
+        got = nbt.read(data)
         self.assertEqual(got, target)
-        self.assertEqual(mibomi.nbt.write(got), data)
+        self.assertEqual(nbt.write(got), data)
 
     def test_big(self):
         def f(n):
@@ -102,9 +100,9 @@ Kzu9Jb5kSQk9qruU/Rh+6NIO2m8VTLFoPivhm5yEmbyEBQllWRZFAP8vKK4v8sKypC4dIHdaO7mM
 yucp31FByRa1xW2hKq0sxTF/unqSjl6dX/gSBSMb0fa3d6rNlXK8nt9YXUuXrpIXuUTQgMj6Pr+z
 3FTLB3Vuo7Z2WZKTqdxRUJlrzDXmGv9XIwhCy+kb1njC7P78evt9eNOE39TypPsIBgAA
         '''))
-        got = mibomi.nbt.read(data)
+        got = nbt.read(data)
         self.assertEqual(got, target)
-        self.assertEqual(mibomi.nbt.write(got), data)
+        self.assertEqual(nbt.write(got), data)
 
 
 if __name__ == '__main__':

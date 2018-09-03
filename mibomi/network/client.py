@@ -9,9 +9,11 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 
-from . import (
-    requester, types, enums, datarw, authenticator, timer, world, chunk
-)
+from . import requester
+from ..datatypes import types, enums, DataRW, World, Chunk
+from ..mojang import authenticator
+from ..utils import Timer
+
 
 PROTOCOL_V1_12_2 = 340
 
@@ -19,9 +21,18 @@ _log = logging.getLogger(__name__)
 
 
 class Client(requester.Requester):
+    """
+    This class is an abstraction over the connection
+    and requester classes, and offers some basic methods
+    such as logging in, preparing encryption, running in
+    a loop to receive new items, and so on.
+
+    You are encouraged to subclass this class when
+    creating your own bot client.
+    """
     def __init__(self, ip, port=25565, *, loop=None):
         super().__init__(ip, port, loop=loop)
-        self._world = world.World()
+        self._world = World()
         self._position = None
         self._id_to_handler = {
             pid: getattr(self, 'on_' + cls.NAME)
@@ -30,14 +41,14 @@ class Client(requester.Requester):
             for pid, cls in types.TYPES.items()
         }
 
-        self._disconnect_timer = timer.Timer(
+        self._disconnect_timer = Timer(
             20, self.keep_alive_disconnect, loop=loop)
 
     async def handshake(self, state: enums.HandshakeState):
         """
         Performs a handshake with the server.
         """
-        data = datarw.DataRW()
+        data = DataRW()
         data.writevari32(PROTOCOL_V1_12_2)
         data.writestr(self.ip)
         data.writefmt('H', self.port)
@@ -49,7 +60,7 @@ class Client(requester.Requester):
         Starts the login process with the server until its completion.
         """
         # Send the Login Start packet
-        data = datarw.DataRW()
+        data = DataRW()
         data.writestr(username)
         await self.send(0, data.getvalue())
 
@@ -108,7 +119,7 @@ class Client(requester.Requester):
         encrypted_secret = pk.encrypt(shared_secret, PKCS1v15())
         token = pk.encrypt(verify_token, PKCS1v15())
 
-        data = datarw.DataRW()
+        data = DataRW()
         data.writevari32(len(encrypted_secret))
         data.write(encrypted_secret)
         data.writevari32(len(token))
@@ -215,18 +226,18 @@ class Client(requester.Requester):
             _log.debug('Received %s: %s', obj.NAME, obj)
 
     async def on_chunk_data(self, data: types.ChunkData):
-        self._world.feed_chunk(chunk.Chunk(data))
+        self._world.feed_chunk(Chunk(data))
 
     async def on_block_change(self, data: types.BlockChange):
         x, y, z = data.location
-        self._world[x, y, z] = chunk.get_block_id(data.id)
+        self._world[x, y, z] = Chunk.get_block_id(data.id)
 
     async def on_multi_block_change(self, data: types.MultiBlockChange):
         c = self._world.get_chunk(data.chunk_x, data.chunk_z)
         for record in data.records:
             x = record.h_pos >> 4
             z = record.h_pos & 0xf
-            c[x, record.y, z] = chunk.get_block_id(record.block_id)
+            c[x, record.y, z] = Chunk.get_block_id(record.block_id)
 
     async def request(self):
         """

@@ -1,5 +1,5 @@
 import unittest
-from mibomi.datarw import DataRW
+from mibomi.datatypes import DataRW
 
 
 class TestDataRW(unittest.TestCase):

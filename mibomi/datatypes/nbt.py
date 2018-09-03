@@ -284,6 +284,9 @@ TAGS = (
 
 
 def read(data):
+    """
+    Reads an NBT tag from the given byte data, stream or file.
+    """
     if not isinstance(data, io.IOBase):
         if isinstance(data, (bytes, bytearray)):
             data = io.BytesIO(data)
@@ -295,6 +298,9 @@ def read(data):
 
 
 def write(data):
+    """
+    Writes the given NBT and returns its `bytes`.
+    """
     stream = io.BytesIO()
     data.write(stream)
     return stream.getvalue()
