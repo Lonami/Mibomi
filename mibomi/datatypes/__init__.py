@@ -7,6 +7,7 @@ to serialize and deserialize all variety of types into the
 binary format used by the protocol in an efficient way.
 """
 from . import enums, nbt, types
+from .basic import Position, Rotation, Slot
 from .datarw import DataRW
 from .chunk import Chunk
 from .world import World

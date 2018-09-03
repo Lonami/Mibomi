@@ -49,7 +49,7 @@ def generate_method(gen: pygen.PyGen, definition: parser.Definition):
         if not isinstance(arg, parser.ArgDefinition):
             break  # Break as soon as we find a conditional or reference
         else:
-            args.append(arg.name)
+            args.append('{}: {}'.format(arg.name, arg.typing()))
             if arg.optional or arg.referenced:
                 args[-1] += '=None'  # Optional/referenced args may be omitted
 

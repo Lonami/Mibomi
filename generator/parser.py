@@ -16,6 +16,10 @@ TYPE_TO_FMT = {
     'double': 'd'
 }
 
+INTEGERS = {
+    'i8', 'u8', 'i16', 'u16', 'i32', 'u32', 'i64', 'u64', 'vari32', 'vari64'
+}
+
 
 class Definition:
     """
@@ -96,6 +100,31 @@ class ArgDefinition:
 
         if self.optional:
             result += '?'
+
+        return result
+
+    def typing(self):
+        result = self.cls
+        if result in INTEGERS:
+            result = 'int'
+        elif result == 'double':
+            result = 'float'
+        elif result == 'uuid':
+            result = 'UUID'
+        elif result == 'pos':
+            result = 'Position'
+        elif result == 'slot':
+            result = 'Slot'
+        elif result == 'nbt':
+            result = 'BaseTag'
+        elif result == 'entmeta':
+            result = 'typing.List[tuple]'
+
+        if self.vec_count_cls:
+            result = 'typing.List[{}]'.format(result)
+
+        if self.optional:
+            result = 'typing.Optional[{}]'.format(result)
 
         return result
 

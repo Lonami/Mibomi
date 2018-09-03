@@ -1,14 +1,10 @@
 import io
 import struct
 import uuid
-import collections
 
+
+from .basic import Position, Rotation, Slot
 from . import nbt
-
-
-Position = collections.namedtuple('Position', ['x', 'y', 'z'])
-Rotation = collections.namedtuple('Rotation', ['x', 'y', 'z'])
-Slot = collections.namedtuple('Slot', ['id', 'count', 'damage', 'nbt'])
 
 
 # https://docs.python.org/3/library/struct.html#format-characters
