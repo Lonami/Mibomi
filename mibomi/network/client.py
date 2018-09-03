@@ -1,8 +1,9 @@
+import asyncio
 import hashlib
 import logging
-import os
 import math
-
+import os
+import time
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
@@ -10,10 +11,9 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 
 from . import requester
-from ..datatypes import types, enums, DataRW, World, Chunk
+from ..datatypes import types, enums, DataRW, Chunk, World, Entities
 from ..mojang import authenticator
 from ..utils import Timer
-
 
 PROTOCOL_V1_12_2 = 340
 
@@ -32,8 +32,9 @@ class Client(requester.Requester):
     """
     def __init__(self, ip, port=25565, *, loop=None):
         super().__init__(ip, port, loop=loop)
-        self._world = World()
-        self._position = None
+        self.world = World()
+        self.entities = Entities()
+        self.position = None
         self._id_to_handler = {
             pid: getattr(self, 'on_' + cls.NAME)
             if hasattr(self, 'on_' + cls.NAME)
@@ -41,6 +42,7 @@ class Client(requester.Requester):
             for pid, cls in types.TYPES.items()
         }
 
+        self._running = False
         self._disconnect_timer = Timer(
             20, self.keep_alive_disconnect, loop=loop)
 
@@ -137,6 +139,8 @@ class Client(requester.Requester):
 
     async def run(self):
         try:
+            self._running = True
+            self._loop.create_task(self._game_loop())
             while True:
                 pid, data = await self.recv()
                 try:
@@ -153,24 +157,24 @@ class Client(requester.Requester):
         except KeyboardInterrupt:
             pass
         finally:
+            self._running = False
             self.disconnect()
 
-    async def walk(self, dx, dz, scale=0.1):
-        if not self._position:
+    async def walk(self, dx, dy, dz, scale=0.1):
+        if not self.position:
             return
 
-        x, y, z = self._position
+        x, y, z = self.position
         x += dx * scale
         z += dz * scale
-        self._position = x, y, z
+        self.position = x, y, z
 
         yaw = -math.atan2(dx, dz) / math.pi * 180
         if yaw < 0:
             yaw = 360 + yaw
 
-        # r = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
-        # pitch = -math.asin(dy / r) / math.pi * 180
-        pitch = 0
+        r = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
+        pitch = -math.asin(dy / r) / math.pi * 180
         await self.player_position_and_look(
             x, y, z, yaw, pitch, on_ground=True)
 
@@ -207,13 +211,13 @@ class Client(requester.Requester):
             pos.x, pos.y, pos.z, pos.yaw, pos.pitch, on_ground=True)
 
         await self.client_status(action_id=0)
-        self._position = pos.x, pos.y, pos.z
+        self.position = pos.x, pos.y, pos.z
         # int() rounds towards zero, math.floor works for negative numbers
         x = math.floor(pos.x)
         y = math.floor(pos.y) - 1
         z = math.floor(pos.z)
         _log.debug('The block below us (%d, %d, %d) is %d',
-                   x, y, z, self._world[x, y, z])
+                   x, y, z, self.world[x, y, z])
 
     async def on_disconnect(self, obj):
         _log.debug('Server disconnected us')
@@ -226,18 +230,44 @@ class Client(requester.Requester):
             _log.debug('Received %s: %s', obj.NAME, obj)
 
     async def on_chunk_data(self, data: types.ChunkData):
-        self._world.feed_chunk(Chunk(data))
+        self.world.feed_chunk(Chunk(data))
 
     async def on_block_change(self, data: types.BlockChange):
         x, y, z = data.location
-        self._world[x, y, z] = Chunk.get_block_id(data.id)
+        self.world[x, y, z] = Chunk.get_block_id(data.id)
 
     async def on_multi_block_change(self, data: types.MultiBlockChange):
-        c = self._world.get_chunk(data.chunk_x, data.chunk_z)
+        c = self.world.get_chunk(data.chunk_x, data.chunk_z)
         for record in data.records:
             x = record.h_pos >> 4
             z = record.h_pos & 0xf
             c[x, record.y, z] = Chunk.get_block_id(record.block_id)
+
+    async def on_spawn_player(self, data):
+        self.entities.feed_player_spawn(data)
+
+    async def on_entity_relative_move(self, data):
+        self.entities.feed_relative_move(data)
+
+    async def on_entity_look_and_relative_move(self, data):
+        self.entities.feed_relative_move(data)
+
+    async def on_entity_teleport(self, data):
+        self.entities.feed_move(data)
+
+    async def _game_loop(self):
+        last = time.time()
+        while self._running:
+            now = time.time()
+            try:
+                await self.game_loop(now - last)
+            except Exception as e:
+                _log.exception('Unhandled game loop exception: %s', e)
+            last = now
+            await asyncio.sleep(0.015, loop=self._loop)
+
+    async def game_loop(self, dt):
+        pass
 
     async def request(self):
         """

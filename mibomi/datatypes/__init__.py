@@ -11,3 +11,4 @@ from .basic import Position, Rotation, Slot
 from .datarw import DataRW
 from .chunk import Chunk
 from .world import World
+from .entities import Entities
