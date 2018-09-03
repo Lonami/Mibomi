@@ -7,45 +7,22 @@ from . import datarw
 CHUNK_HEIGHT = 256
 SECTION_WIDTH = 16
 SECTION_HEIGHT = 16
+SECTION_SIZE = SECTION_WIDTH * SECTION_HEIGHT * SECTION_WIDTH
 
 
-class _IndirectPalette:
+def _get_palette_map(data, bits_per_block):
     """
-    Indirect block palette, which needs a mapping block -> real ID.
-    """
-    def __init__(self, bits_per_block):
-        self.bits_per_block = bits_per_block
-        self.state_ids = []
-
-    def read(self, data):
-        # NOTE: This changes in 1.13
-        # The 4 low bits represent metadata, and the rest is the block ID.
-        self.state_ids = [Chunk.get_block_id(data.readvari32())
-                          for _ in range(data.readvari32())]
-
-    def __getitem__(self, item):
-        return self.state_ids[item]
-
-
-class _DirectPalette:
-    """
-    Direct block palette, where sending an indirect palette would be costly.
-    """
-    def read(self, data):
-        data.readvari32()  # stub
-
-    def __getitem__(self, item):
-        return item
-
-
-def _get_palette(bits_per_block):
-    """
-    Retrieve the appropriated block palette based on the bits per block.
+    Retrieve the appropriated block palette based on the bits per block
+    as a mapping function ``f(palette index) -> block index``.
     """
     if bits_per_block > 8:
-        return _DirectPalette()
+        data.readvari32()  # Direct palette stub
+        return lambda x: x
     else:
-        return _IndirectPalette(max(bits_per_block, 4))
+        # Indirect palette is a vari32 and N vari32 block IDs
+        # TODO This will change in 1.13.
+        return [Chunk.get_block_id(data.readvari32())
+                for _ in range(data.readvari32())].__getitem__
 
 
 class Chunk:
@@ -114,40 +91,39 @@ class Section:
     Sections have `light` and `sky_light` data.
     """
     def __init__(self, data, over_world):
-        self._bits_per_block = data.read(1)[0]
-        self._palette = _get_palette(self._bits_per_block)
-        self._palette.read(data)
+        bpb = data.read(1)[0]  # bits per block
+        palette = _get_palette_map(data, bpb)
 
-        block_ids = []
         length = data.readvari32()
-        section_size = SECTION_HEIGHT * SECTION_WIDTH * SECTION_WIDTH
-        assert (length * 64) // self._bits_per_block >= section_size
-
+        assert (length * 64) // bpb >= SECTION_SIZE
+        # It's VERY important that we read UNSIGNED.
+        #
+        # We want to work with the BITS and shift BITS alone;
+        # shifting negative integers in Python, where the numbers
+        # have no bounded size, produces strange results; this
+        # took a few hours to debug and obviously fails "randomly".
+        #
         # Note that the bits are read from *low to high* in chunks
         # of *long values*. For this reason we have an integer with
         # an amount of bits, and every time we need more bits, read
         # another long worth of bits.
-        bits = 0  # How many bits do we have available...
-        integer = 0  # ...in this integer?
-        mask = (1 << self._bits_per_block) - 1
-        for _ in range(section_size):
-            if bits < self._bits_per_block:
-                # It's VERY important that we read UNSIGNED.
-                #
-                # We want to work with the BITS and shift BITS alone;
-                # shifting negative integers in Python, where the numbers
-                # have no bounded size, produces strange results; this
-                # took a few hours to debug and obviously fails "randomly".
-                integer |= data.readfmt('Q')[0] << bits
+        #
+        # This is a very tight loop, and iter() + next() seems to
+        # play best, as well as avoiding .append() calls, pre-allocating
+        # enough block IDs, a simple mapping function for the palette.
+        bits = 0
+        integer = 0
+        mask = (1 << bpb) - 1
+        block_ids = [0] * SECTION_SIZE
+        longs = iter(data.readfmt('Q' * length))
+        for i in range(SECTION_SIZE):
+            if bits < bpb:
+                integer |= next(longs) << bits
                 bits += 64
-                length -= 1
 
-            block_ids.append(self._palette[integer & mask])
-            integer >>= self._bits_per_block
-            bits -= self._bits_per_block
-
-        # Assert that we have read exactly all the longs we needed
-        assert length == 0
+            block_ids[i] = palette(integer & mask)
+            integer >>= bpb
+            bits -= bpb
 
         self._blocks = block_ids
         self.light = LightData(data)
@@ -163,6 +139,35 @@ class Section:
     def __setitem__(self, xyz, value):
         x, y, z = xyz
         self._blocks[(y * SECTION_HEIGHT + z) * SECTION_WIDTH + x] = value
+
+
+"""
+A way to access palette indices straight from the array of longs:
+
+def get_index(xyz):
+    x, y, z = xyz
+    bpb = self._bits_per_block
+    # We want the i'th block at the right bit index.
+    # Each long is 64 bits; return long index + offset.
+    i, o = divmod(
+        bpb * ((y * SECTION_HEIGHT + z) * SECTION_WIDTH + x),
+        64
+    )
+    # Retrieve the correct long Result and shift it by Offset
+    r = self._longs[i] >> o
+    if o + bpb > 64:
+        # We have some Missing bits from the next long
+        m = (o + bpb) - 64
+        m = self._longs[i + 1] & ((1 << m) - 1)
+        r |= m << (bpb - o)
+
+    return self._palette[r & self._mask]
+
+The problem with this approach is that, when a block needs to
+be updated ((over)written), it would need to be looked up in
+the palette, which may or may not have the block and may or
+may not need resizing, so it's only suitable for reading.
+"""
 
 
 class LightData:
