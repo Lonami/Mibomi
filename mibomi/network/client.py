@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import json
 import logging
 import math
 import os
@@ -46,7 +47,14 @@ class Client(requester.Requester):
         self._disconnect_timer = Timer(
             20, self.keep_alive_disconnect, loop=loop)
 
-    async def handshake(self, state: enums.HandshakeState):
+    async def ping(self):
+        await self._handshake(enums.HandshakeState.STATUS)
+        await self.send(0, b'')
+        pid, data = await self.recv()
+        assert pid == 0
+        return json.loads(data.readstr())
+
+    async def _handshake(self, state: enums.HandshakeState):
         """
         Performs a handshake with the server.
         """
@@ -57,10 +65,13 @@ class Client(requester.Requester):
         data.writevari32(state)
         await self.send(0, data.getvalue())
 
-    async def login(self, username, access_token, profile_id):
+    async def login(self, username, access_token=None, profile_id=None):
         """
         Starts the login process with the server until its completion.
         """
+        # Initial Login Handshake
+        await self._handshake(enums.HandshakeState.LOGIN)
+
         # Send the Login Start packet
         data = DataRW()
         data.writestr(username)
@@ -69,6 +80,9 @@ class Client(requester.Requester):
         # Receive Encryption Request
         pid, data = await self.recv()
         if pid == 1:
+            if not access_token or not profile_id:
+                raise ValueError('Online mode enabled without access token')
+
             await self._setup_encryption(data, access_token, profile_id)
             pid, data = await self.recv()
 
@@ -268,12 +282,6 @@ class Client(requester.Requester):
 
     async def game_loop(self, dt):
         pass
-
-    async def request(self):
-        """
-        Sends a (ping, empty) request to the server.
-        """
-        await self.send(0, b'')
 
     async def keep_alive_disconnect(self):
         _log.info('Server did not send a keep-alive in time; disconnecting')
