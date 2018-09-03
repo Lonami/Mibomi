@@ -182,15 +182,23 @@ class Client(requester.Requester):
         x += dx * scale
         z += dz * scale
         self.position = x, y, z
+        yaw, pitch = self._delta_to_yaw_pitch(dx, dy, dz)
+        await self.player_position_and_look(
+            x, y, z, yaw, pitch, on_ground=True)
 
+    async def look(self, dx, dy, dz):
+        yaw, pitch = self._delta_to_yaw_pitch(dx, dy, dz)
+        await self.player_look(yaw, pitch, on_ground=True)
+
+    @staticmethod
+    def _delta_to_yaw_pitch(dx, dy, dz):
         yaw = -math.atan2(dx, dz) / math.pi * 180
         if yaw < 0:
             yaw = 360 + yaw
 
         r = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
         pitch = -math.asin(dy / r) / math.pi * 180
-        await self.player_position_and_look(
-            x, y, z, yaw, pitch, on_ground=True)
+        return yaw, pitch
 
     async def on_unknown(self, pid, data):
         _log.debug('Unknown packet %x', pid)
