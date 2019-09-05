@@ -10,6 +10,16 @@ It works in offline and online mode (although it needs an account
 for that!). If it doesn't, please file a bug report or try to create
 a pull request to address the issue.
 
+Since the Minecraft protocol defines a lot of items, a custom
+DSL + code generator has been made to ease maintenance. This
+means that, to use and develop the project, **you must run**:
+
+```sh
+python generator.py
+```
+
+…at least once, until you change the definitions where you should
+re-run it.
 
 utils/
 ------
